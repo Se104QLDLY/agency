@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
 const ReportDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,106 +62,104 @@ const ReportDetailPage: React.FC = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen bg-gray-100 p-6">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">
-              CHI TIẾT BÁO CÁO - {reportData.id}
-            </h1>
-            <Link
-              to="/search"
-              className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-              </svg>
-              Quay lại danh sách
-            </Link>
-          </div>
-        </div>
-
-        {/* Report Info */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Thông tin cơ bản</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Mã báo cáo</label>
-              <p className="text-gray-900 font-semibold">{reportData.id}</p>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Loại báo cáo</label>
-              <div>{getTypeBadge(reportData.type)}</div>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Ngày báo cáo</label>
-              <p className="text-gray-900 font-semibold">{reportData.reportDate}</p>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Kỳ báo cáo</label>
-              <p className="text-gray-900 font-semibold">{reportData.period}</p>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Số tiền</label>
-              <p className="text-gray-900 font-semibold text-lg">{formatCurrency(reportData.amount)}</p>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Trạng thái</label>
-              <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-lg">
-                {reportData.status}
-              </span>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Người tạo</label>
-              <p className="text-gray-900 font-semibold">{reportData.creator}</p>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Ngày tạo</label>
-              <p className="text-gray-900 font-semibold">{reportData.createdDate}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Report Description */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Mô tả báo cáo</h2>
-          <p className="text-gray-700 text-lg">{reportData.description}</p>
-        </div>
-
-        {/* Report Details */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Chi tiết báo cáo</h2>
-          <div className="bg-gray-50 rounded-lg p-6">
-            <pre className="text-gray-700 whitespace-pre-wrap font-mono text-sm leading-relaxed">
-              {reportData.details}
-            </pre>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-4 mt-6">
-          <button className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-            Xuất PDF
-          </button>
-          <button className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors">
-            Xuất Excel
-          </button>
-          <button className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors">
-            In báo cáo
-          </button>
+    <div className="min-h-screen bg-gray-100 p-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">
+            CHI TIẾT BÁO CÁO - {reportData.id}
+          </h1>
+          <Link
+            to="/search"
+            className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+            </svg>
+            Quay lại danh sách
+          </Link>
         </div>
       </div>
-    </DashboardLayout>
+
+      {/* Report Info */}
+      <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">Thông tin cơ bản</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div>
+            <label className="block text-gray-600 font-medium mb-1">Mã báo cáo</label>
+            <p className="text-gray-900 font-semibold">{reportData.id}</p>
+          </div>
+          
+          <div>
+            <label className="block text-gray-600 font-medium mb-1">Loại báo cáo</label>
+            <div>{getTypeBadge(reportData.type)}</div>
+          </div>
+          
+          <div>
+            <label className="block text-gray-600 font-medium mb-1">Ngày báo cáo</label>
+            <p className="text-gray-900 font-semibold">{reportData.reportDate}</p>
+          </div>
+          
+          <div>
+            <label className="block text-gray-600 font-medium mb-1">Kỳ báo cáo</label>
+            <p className="text-gray-900 font-semibold">{reportData.period}</p>
+          </div>
+          
+          <div>
+            <label className="block text-gray-600 font-medium mb-1">Số tiền</label>
+            <p className="text-gray-900 font-semibold text-lg">{formatCurrency(reportData.amount)}</p>
+          </div>
+          
+          <div>
+            <label className="block text-gray-600 font-medium mb-1">Trạng thái</label>
+            <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-lg">
+              {reportData.status}
+            </span>
+          </div>
+          
+          <div>
+            <label className="block text-gray-600 font-medium mb-1">Người tạo</label>
+            <p className="text-gray-900 font-semibold">{reportData.creator}</p>
+          </div>
+          
+          <div>
+            <label className="block text-gray-600 font-medium mb-1">Ngày tạo</label>
+            <p className="text-gray-900 font-semibold">{reportData.createdDate}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Report Description */}
+      <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Mô tả báo cáo</h2>
+        <p className="text-gray-700 text-lg">{reportData.description}</p>
+      </div>
+
+      {/* Report Details */}
+      <div className="bg-white rounded-lg shadow-lg p-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Chi tiết báo cáo</h2>
+        <div className="bg-gray-50 rounded-lg p-6">
+          <pre className="text-gray-700 whitespace-pre-wrap font-mono text-sm leading-relaxed">
+            {reportData.details}
+          </pre>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-4 mt-6">
+        <button className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+          Xuất PDF
+        </button>
+        <button className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors">
+          Xuất Excel
+        </button>
+        <button className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors">
+          In báo cáo
+        </button>
+      </div>
+    </div>
   );
 };
 
-export default ReportDetailPage; 
+export default ReportDetailPage;
