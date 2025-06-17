@@ -14,7 +14,7 @@ interface ReportFormData {
 }
 
 const schema = yup.object({
-  type: yup.string().required('Vui lòng chọn loại báo cáo'),
+  type: yup.string().oneOf(['Doanh số', 'Công nợ'], 'Vui lòng chọn loại báo cáo').required('Vui lòng chọn loại báo cáo'),
   reportDate: yup.string().required('Vui lòng chọn ngày báo cáo'),
   period: yup.string().required('Vui lòng chọn kỳ báo cáo'),
   description: yup.string().required('Vui lòng nhập mô tả báo cáo').min(10, 'Mô tả phải có ít nhất 10 ký tự'),
