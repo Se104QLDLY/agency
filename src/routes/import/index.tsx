@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
 interface ProductItem {
   name: string;
@@ -16,37 +15,39 @@ interface ExportOrder {
 }
 
 const ImportPage: React.FC = () => {
-  const [orders, setOrders] = useState<ExportOrder[]>([
-    {
-      id: 'PX001',
-      exportDate: '2024-01-15',
-      products: [
-        { name: 'Sản phẩm A', quantity: 10, unit: 'thùng' },
-        { name: 'Sản phẩm B', quantity: 5, unit: 'kg' }
-      ],
-      totalAmount: 18500000,
-      status: 'Đang chờ nhận'
-    },
-    {
-      id: 'PX002',
-      exportDate: '2024-01-14',
-      products: [
-        { name: 'Sản phẩm C', quantity: 20, unit: 'chai' },
-        { name: 'Sản phẩm D', quantity: 8, unit: 'hộp' }
-      ],
-      totalAmount: 25700000,
-      status: 'Đang chờ nhận'
-    },
-    {
-      id: 'PX003',
-      exportDate: '2024-01-13',
-      products: [
-        { name: 'Sản phẩm E', quantity: 15, unit: 'gói' }
-      ],
-      totalAmount: 12300000,
-      status: 'Đã nhận'
-    }
-  ]);
+  const [orders, setOrders] = useState<ExportOrder[]>(
+    [
+      {
+        id: 'PX001',
+        exportDate: '2024-01-15',
+        products: [
+          { name: 'Sản phẩm A', quantity: 10, unit: 'thùng' },
+          { name: 'Sản phẩm B', quantity: 5, unit: 'kg' }
+        ],
+        totalAmount: 18500000,
+        status: 'Đang chờ nhận'
+      },
+      {
+        id: 'PX002',
+        exportDate: '2024-01-14',
+        products: [
+          { name: 'Sản phẩm C', quantity: 20, unit: 'chai' },
+          { name: 'Sản phẩm D', quantity: 8, unit: 'hộp' }
+        ],
+        totalAmount: 25700000,
+        status: 'Đang chờ nhận'
+      },
+      {
+        id: 'PX003',
+        exportDate: '2024-01-13',
+        products: [
+          { name: 'Sản phẩm E', quantity: 15, unit: 'gói' }
+        ],
+        totalAmount: 12300000,
+        status: 'Đã nhận'
+      }
+    ]
+  );
 
   const handleReceiveOrder = async (orderId: string) => {
     try {
@@ -109,46 +110,40 @@ const ImportPage: React.FC = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            Nhận hàng
-          </h1>
-          <p className="text-gray-600">
-            Phiếu xuất đang chờ nhận
-          </p>
-        </div>
-
-        {/* Orders Table */}
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-blue-100 mb-8">
+        <h1 className="text-3xl font-extrabold text-blue-800 mb-2 drop-shadow uppercase tracking-wide">
+          NHẬN HÀNG
+        </h1>
+        <p className="text-gray-600 text-lg">
+          Danh sách phiếu xuất đang chờ nhận và đã nhận.
+        </p>
+      </div>
+      <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-100">
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white border-collapse">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="py-3 px-4 text-left text-gray-600 font-medium">Mã phiếu</th>
-                <th className="py-3 px-4 text-left text-gray-600 font-medium">Ngày xuất</th>
-                <th className="py-3 px-4 text-left text-gray-600 font-medium">Danh sách sản phẩm</th>
-                <th className="py-3 px-4 text-left text-gray-600 font-medium">Trạng thái</th>
-                <th className="py-3 px-4 text-left text-gray-600 font-medium">Thao tác</th>
+              <tr className="border-b border-blue-100">
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Mã phiếu</th>
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Ngày xuất</th>
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Danh sách sản phẩm</th>
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Trạng thái</th>
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {orders.map((order, index) => (
-                <tr key={order.id} className={index < orders.length - 1 ? "border-b border-gray-100" : ""}>
-                  <td className="px-4 py-4 font-semibold text-gray-900">
-                    {order.id}
-                  </td>
-                  <td className="px-4 py-4 text-gray-700">
-                    {order.exportDate}
-                  </td>
+                <tr key={order.id} className={index < orders.length - 1 ? "border-b border-blue-50" : ""}>
+                  <td className="px-4 py-4 font-semibold text-gray-900 whitespace-nowrap">{order.id}</td>
+                  <td className="px-4 py-4 text-gray-700 whitespace-nowrap">{order.exportDate}</td>
                   <td className="px-4 py-4">
                     <div className="space-y-1">
-                      {order.products.map((product, index) => (
-                        <div key={index} className="text-gray-700">
+                      {order.products.map((product, idx) => (
+                        <div key={idx} className="text-gray-700">
                           {product.name} <span className="text-gray-500 ml-8">{product.quantity} {product.unit}</span>
                         </div>
                       ))}
-                      <div className="text-gray-900 font-semibold mt-2">
+                      <div className="text-blue-800 font-bold mt-2">
                         Tổng: {formatCurrency(order.totalAmount)}
                       </div>
                     </div>
@@ -164,14 +159,13 @@ const ImportPage: React.FC = () => {
             </tbody>
           </table>
         </div>
-
         {orders.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">Không có phiếu xuất nào đang chờ nhận.</p>
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </div>
   );
 };
 

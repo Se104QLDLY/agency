@@ -1,6 +1,5 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
 const PaymentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,133 +32,131 @@ const PaymentDetailPage: React.FC = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Chi tiết phiếu thu: {paymentDetail.code}</h1>
-            <p className="text-gray-500">Ngày tạo: {paymentDetail.createdDate}</p>
-          </div>
-          <div className="flex space-x-3">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              In phiếu thu
-            </button>
-            <Link to="/payment" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
-              Quay lại
-            </Link>
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Chi tiết phiếu thu: {paymentDetail.code}</h1>
+          <p className="text-gray-500">Ngày tạo: {paymentDetail.createdDate}</p>
+        </div>
+        <div className="flex space-x-3">
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            In phiếu thu
+          </button>
+          <Link to="/payment" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+            Quay lại
+          </Link>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Payment Information */}
+        <div className="border rounded-lg p-6">
+          <h2 className="text-lg font-medium mb-4">Thông tin phiếu thu</h2>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Mã phiếu thu:</span>
+              <span className="font-medium">{paymentDetail.code}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Ngày thu:</span>
+              <span>{paymentDetail.paymentDate}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Số tiền:</span>
+              <span className="font-medium text-green-600">{paymentDetail.amount}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Người tạo:</span>
+              <span>{paymentDetail.creator}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Ngày tạo:</span>
+              <span>{paymentDetail.createdDate}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Cập nhật lần cuối:</span>
+              <span>{paymentDetail.updatedDate}</span>
+            </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Payment Information */}
-          <div className="border rounded-lg p-6">
-            <h2 className="text-lg font-medium mb-4">Thông tin phiếu thu</h2>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Mã phiếu thu:</span>
-                <span className="font-medium">{paymentDetail.code}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Ngày thu:</span>
-                <span>{paymentDetail.paymentDate}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Số tiền:</span>
-                <span className="font-medium text-green-600">{paymentDetail.amount}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Người tạo:</span>
-                <span>{paymentDetail.creator}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Ngày tạo:</span>
-                <span>{paymentDetail.createdDate}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Cập nhật lần cuối:</span>
-                <span>{paymentDetail.updatedDate}</span>
-              </div>
+        {/* Agency Information */}
+        <div className="border rounded-lg p-6">
+          <h2 className="text-lg font-medium mb-4">Thông tin đại lý</h2>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Đại lý:</span>
+              <span className="font-medium">{paymentDetail.agency.name}</span>
             </div>
-          </div>
-          
-          {/* Agency Information */}
-          <div className="border rounded-lg p-6">
-            <h2 className="text-lg font-medium mb-4">Thông tin đại lý</h2>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Đại lý:</span>
-                <span className="font-medium">{paymentDetail.agency.name}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Mã đại lý:</span>
-                <span>{paymentDetail.agency.code}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Địa chỉ:</span>
-                <span>{paymentDetail.agency.address}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Điện thoại:</span>
-                <span>{paymentDetail.agency.phone}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Email:</span>
-                <span>{paymentDetail.agency.email}</span>
-              </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Mã đại lý:</span>
+              <span>{paymentDetail.agency.code}</span>
             </div>
-          </div>
-          
-          {/* Payment Method */}
-          <div className="border rounded-lg p-6">
-            <h2 className="text-lg font-medium mb-4">Phương thức thanh toán</h2>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Phương thức:</span>
-                <span>{paymentDetail.paymentMethod}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Ngân hàng:</span>
-                <span>{paymentDetail.bankInfo}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Số tài khoản:</span>
-                <span>{paymentDetail.accountNumber}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Chủ tài khoản:</span>
-                <span>{paymentDetail.accountHolder}</span>
-              </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Địa chỉ:</span>
+              <span>{paymentDetail.agency.address}</span>
             </div>
-          </div>
-          
-          {/* Debt Information */}
-          <div className="border rounded-lg p-6">
-            <h2 className="text-lg font-medium mb-4">Thông tin công nợ</h2>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Nợ trước khi thanh toán:</span>
-                <span className="text-red-600">{paymentDetail.previousDebt}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Số tiền thanh toán:</span>
-                <span className="text-green-600">{paymentDetail.amount}</span>
-              </div>
-              <div className="grid grid-cols-2">
-                <span className="text-gray-500">Nợ còn lại:</span>
-                <span className="font-medium text-red-600">{paymentDetail.remainingDebt}</span>
-              </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Điện thoại:</span>
+              <span>{paymentDetail.agency.phone}</span>
             </div>
-          </div>
-          
-          {/* Notes */}
-          <div className="border rounded-lg p-6 lg:col-span-2">
-            <h2 className="text-lg font-medium mb-4">Ghi chú</h2>
-            <p className="text-gray-700">{paymentDetail.notes}</p>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Email:</span>
+              <span>{paymentDetail.agency.email}</span>
+            </div>
           </div>
         </div>
+        
+        {/* Payment Method */}
+        <div className="border rounded-lg p-6">
+          <h2 className="text-lg font-medium mb-4">Phương thức thanh toán</h2>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Phương thức:</span>
+              <span>{paymentDetail.paymentMethod}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Ngân hàng:</span>
+              <span>{paymentDetail.bankInfo}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Số tài khoản:</span>
+              <span>{paymentDetail.accountNumber}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Chủ tài khoản:</span>
+              <span>{paymentDetail.accountHolder}</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Debt Information */}
+        <div className="border rounded-lg p-6">
+          <h2 className="text-lg font-medium mb-4">Thông tin công nợ</h2>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Nợ trước khi thanh toán:</span>
+              <span className="text-red-600">{paymentDetail.previousDebt}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Số tiền thanh toán:</span>
+              <span className="text-green-600">{paymentDetail.amount}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              <span className="text-gray-500">Nợ còn lại:</span>
+              <span className="font-medium text-red-600">{paymentDetail.remainingDebt}</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Notes */}
+        <div className="border rounded-lg p-6 lg:col-span-2">
+          <h2 className="text-lg font-medium mb-4">Ghi chú</h2>
+          <p className="text-gray-700">{paymentDetail.notes}</p>
+        </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 };
 
-export default PaymentDetailPage; 
+export default PaymentDetailPage;

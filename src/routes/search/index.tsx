@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
 interface Report {
   id: string;
@@ -71,107 +70,84 @@ const ReportsPage: React.FC = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen bg-gray-100 p-6">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">
-            LẬP BÁO CÁO
-          </h1>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-blue-100 mb-8">
+        <h1 className="text-3xl font-extrabold text-blue-800 mb-2 drop-shadow uppercase tracking-wide">
+          LẬP BÁO CÁO
+        </h1>
+        <p className="text-gray-600 text-lg">
+          Tổng hợp, thống kê và quản lý các báo cáo doanh số, công nợ của đại lý.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-lg p-6 border-2 border-green-100">
+          <h3 className="text-gray-700 font-semibold mb-2">Tổng doanh số</h3>
+          <p className="text-2xl font-extrabold text-blue-700">{formatCurrency(totalRevenue)}</p>
         </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          {/* Total Revenue */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-gray-600 font-medium mb-2">Tổng doanh số</h3>
-            <p className="text-2xl font-bold text-blue-600">
-              {formatCurrency(totalRevenue)}
-            </p>
-          </div>
-
-          {/* Total Debt */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-gray-600 font-medium mb-2">Tổng nợ</h3>
-            <p className="text-2xl font-bold text-red-600">
-              {formatCurrency(totalDebt)}
-            </p>
-          </div>
-
-          {/* Report Count */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-gray-600 font-medium mb-2">Số lượng báo cáo</h3>
-            <p className="text-2xl font-bold text-gray-900">
-              {reportCount}
-            </p>
-          </div>
+        <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl shadow-lg p-6 border-2 border-red-100">
+          <h3 className="text-gray-700 font-semibold mb-2">Tổng nợ</h3>
+          <p className="text-2xl font-extrabold text-red-600">{formatCurrency(totalDebt)}</p>
         </div>
-
-        {/* Reports Table */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Danh sách báo cáo</h2>
-            <Link
-              to="/reports/add"
-              className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-              Lập báo cáo
-            </Link>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Mã báo cáo</th>
-                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Loại báo cáo</th>
-                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Ngày báo cáo</th>
-                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Dữ liệu báo cáo</th>
-                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Người tạo</th>
-                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Ngày tạo</th>
-                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reports.map((report, index) => (
-                  <tr key={report.id} className={index < reports.length - 1 ? "border-b border-gray-100" : ""}>
-                    <td className="px-4 py-4 font-semibold text-gray-900">
-                      {report.id}
-                    </td>
-                    <td className="px-4 py-4">
-                      {getTypeBadge(report.type)}
-                    </td>
-                    <td className="px-4 py-4 text-gray-700">
-                      {report.reportDate}
-                    </td>
-                    <td className="px-4 py-4 text-gray-700">
-                      {formatCurrency(report.amount)}
-                    </td>
-                    <td className="px-4 py-4 text-gray-700">
-                      {report.creator}
-                    </td>
-                    <td className="px-4 py-4 text-gray-700">
-                      {report.createdDate}
-                    </td>
-                    <td className="px-4 py-4">
-                      <Link
-                        to={`/reports/detail/${report.id}`}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        Xem chi tiết
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl shadow-lg p-6 border-2 border-blue-100">
+          <h3 className="text-gray-700 font-semibold mb-2">Số lượng báo cáo</h3>
+          <p className="text-2xl font-extrabold text-blue-800">{reportCount}</p>
         </div>
       </div>
-    </DashboardLayout>
+      <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-blue-100">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+          <h2 className="text-2xl font-bold text-blue-800 drop-shadow">Danh sách báo cáo</h2>
+          <Link
+            to="/reports/add"
+            className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Lập báo cáo
+          </Link>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border-collapse">
+            <thead>
+              <tr className="border-b border-blue-100">
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Mã báo cáo</th>
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Loại báo cáo</th>
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Ngày báo cáo</th>
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Dữ liệu báo cáo</th>
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Người tạo</th>
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Ngày tạo</th>
+                <th className="py-3 px-4 text-left text-blue-700 font-semibold">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.map((report, index) => (
+                <tr key={report.id} className={index < reports.length - 1 ? "border-b border-blue-50" : ""}>
+                  <td className="px-4 py-4 font-semibold text-gray-900 whitespace-nowrap">{report.id}</td>
+                  <td className="px-4 py-4">{getTypeBadge(report.type)}</td>
+                  <td className="px-4 py-4 text-gray-700 whitespace-nowrap">{report.reportDate}</td>
+                  <td className="px-4 py-4 text-gray-700">{formatCurrency(report.amount)}</td>
+                  <td className="px-4 py-4 text-gray-700">{report.creator}</td>
+                  <td className="px-4 py-4 text-gray-700 whitespace-nowrap">{report.createdDate}</td>
+                  <td className="px-4 py-4">
+                    <Link
+                      to={`/reports/detail/${report.id}`}
+                      className="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Xem chi tiết
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {reports.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500 text-lg">Không có báo cáo nào.</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
