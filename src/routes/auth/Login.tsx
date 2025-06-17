@@ -25,31 +25,45 @@ const Login: React.FC = () => {
             Đăng nhập
           </h2>
           <p className="text-gray-600">
-            Vui lòng đăng nhập để tiếp tục
+            Chọn vai trò và đăng nhập để tiếp tục
           </p>
         </div>
         
-        <div className="flex bg-gray-100 p-1 rounded-lg mb-6">
-          <button
-            onClick={() => setLoginType('admin')}
-            className={`flex-1 py-2 rounded-md text-center transition-all ${
-              loginType === 'admin' 
-                ? 'bg-white text-blue-600 shadow-sm font-medium' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Admin
-          </button>
-          <button
-            onClick={() => setLoginType('client')}
-            className={`flex-1 py-2 rounded-md text-center transition-all ${
-              loginType === 'client' 
-                ? 'bg-white text-blue-600 shadow-sm font-medium' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Client
-          </button>
+        {/* Role Selection */}
+        <div className="mb-6">
+          <label className="block text-gray-700 font-semibold mb-3">Chọn vai trò</label>
+          <div className="grid grid-cols-3 gap-2 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setLoginType('admin')}
+              className={`py-3 px-3 rounded-md text-center transition-all text-sm font-medium ${
+                loginType === 'admin' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Admin
+            </button>
+            <button
+              onClick={() => setLoginType('staff')}
+              className={`py-3 px-3 rounded-md text-center transition-all text-sm font-medium ${
+                loginType === 'staff' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Staff
+            </button>
+            <button
+              onClick={() => setLoginType('agency')}
+              className={`py-3 px-3 rounded-md text-center transition-all text-sm font-medium ${
+                loginType === 'agency' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Agency
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -80,7 +94,7 @@ const Login: React.FC = () => {
             type="submit"
             className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition-all text-lg border-2 border-transparent hover:border-blue-700"
           >
-            Đăng nhập
+            Đăng nhập với vai trò {loginType === 'admin' ? 'Admin' : loginType === 'staff' ? 'Staff' : 'Agency'}
           </button>
         </form>
         <div className="flex justify-between mt-6 text-sm">

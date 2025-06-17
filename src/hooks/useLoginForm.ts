@@ -15,7 +15,7 @@ const schema = yup.object().shape({
 });
 
 export const useLoginForm = () => {
-  const [loginType, setLoginType] = useState<'admin' | 'client'>('admin');
+  const [loginType, setLoginType] = useState<'admin' | 'staff' | 'agency'>('admin');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [userName, setUserName] = useState('');
@@ -32,8 +32,23 @@ export const useLoginForm = () => {
     setIsLoggedIn(true);
     setUserName(data.username);
     
-    // Navigate to admin dashboard after successful login
-    navigate('/admin');
+    // Navigate based on login type
+    switch (loginType) {
+      case 'admin':
+        // Redirect to admin application
+        window.location.href = '/admin';
+        break;
+      case 'staff':
+        // Redirect to staff application  
+        window.location.href = '/staff';
+        break;
+      case 'agency':
+        // Stay in current agency application
+        navigate('/');
+        break;
+      default:
+        navigate('/');
+    }
   };
 
   const handleLogout = () => {
