@@ -1,130 +1,178 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
-interface Agency {
+interface Report {
   id: string;
-  name: string;
-  code: string;
-  district: string;
-  ward: string;
-  address: string;
-  phone: string;
-  email: string;
-  type: {
-    id: number;
-    name: string;
-  }
+  type: 'Doanh số' | 'Công nợ';
+  reportDate: string;
+  amount: number;
+  creator: string;
+  createdDate: string;
 }
 
-const SearchPage: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [districtFilter, setDistrictFilter] = useState('all');
-
-  // Mock data
-  const agencies: Agency[] = [
+const ReportsPage: React.FC = () => {
+  const [reports] = useState<Report[]>([
     {
-      id: '1',
-      name: 'Đại lý Phương Nam',
-      code: 'DL001',
-      district: 'Quận 1',
-      ward: 'Phường Bến Nghé',
-      address: '123 Nguyễn Huệ, Phường Bến Nghé',
-      phone: '028 1234 5678',
-      email: 'phuongnam@email.com',
-      type: {
-        id: 1,
-        name: 'Cấp 1'
-      }
+      id: 'BC001',
+      type: 'Doanh số',
+      reportDate: '15/01/2024',
+      amount: 1250000000,
+      creator: 'Nguyễn Văn A',
+      createdDate: '15/01/2024'
     },
     {
-      id: '2',
-      name: 'Đại lý Miền Tây',
-      code: 'DL002',
-      district: 'Quận 5',
-      ward: 'Phường 6',
-      address: '456 Trần Hưng Đạo, Phường 6',
-      phone: '028 8765 4321',
-      email: 'mientay@email.com',
-      type: {
-        id: 2,
-        name: 'Cấp 2'
-      }
+      id: 'BC002',
+      type: 'Công nợ',
+      reportDate: '14/01/2024',
+      amount: 458000000,
+      creator: 'Trần Thị B',
+      createdDate: '14/01/2024'
+    },
+    {
+      id: 'BC003',
+      type: 'Doanh số',
+      reportDate: '13/01/2024',
+      amount: 890000000,
+      creator: 'Lê Văn C',
+      createdDate: '13/01/2024'
     }
-  ];
+  ]);
 
-  const filteredAgencies = agencies.filter(agency => {
-    if (searchTerm && !agency.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-        !agency.code.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
+  // Calculate statistics
+  const totalRevenue = reports
+    .filter(report => report.type === 'Doanh số')
+    .reduce((sum, report) => sum + report.amount, 0);
+  
+  const totalDebt = reports
+    .filter(report => report.type === 'Công nợ')
+    .reduce((sum, report) => sum + report.amount, 0);
+  
+  const reportCount = reports.length;
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
+  };
+
+  const getTypeBadge = (type: string) => {
+    if (type === 'Doanh số') {
+      return (
+        <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-lg">
+          Doanh số
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-block px-3 py-1 bg-red-100 text-red-800 text-sm font-semibold rounded-lg">
+          Công nợ
+        </span>
+      );
     }
-    if (typeFilter !== 'all' && agency.type.name !== typeFilter) {
-      return false;
-    }
-    if (districtFilter !== 'all' && agency.district !== districtFilter) {
-      return false;
-    }
-    return true;
-  });
+  };
 
   return (
     <DashboardLayout>
-      <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-blue-100">
-        <h1 className="text-3xl font-extrabold text-blue-800 mb-8 drop-shadow uppercase tracking-wide">Tra cứu đại lý</h1>
-        <div className="flex flex-wrap gap-4 mb-8">
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo tên hoặc mã đại lý..."
-            className="flex-1 min-w-[220px] px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <select
-            className="px-4 py-3 border-2 border-blue-200 rounded-xl bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-          >
-            <option value="all">Tất cả loại đại lý</option>
-            <option value="Cấp 1">Cấp 1</option>
-            <option value="Cấp 2">Cấp 2</option>
-          </select>
-          <select
-            className="px-4 py-3 border-2 border-blue-200 rounded-xl bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold"
-            value={districtFilter}
-            onChange={(e) => setDistrictFilter(e.target.value)}
-          >
-            <option value="all">Tất cả quận/huyện</option>
-            <option value="Quận 1">Quận 1</option>
-            <option value="Quận 5">Quận 5</option>
-          </select>
+      <div className="min-h-screen bg-gray-100 p-6">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">
+            LẬP BÁO CÁO
+          </h1>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredAgencies.map((agency) => (
-            <div key={agency.id} className="bg-gradient-to-br from-blue-50 via-white to-cyan-50 border-2 border-blue-200 rounded-2xl shadow-xl p-6 hover:scale-105 hover:shadow-2xl transition-all flex flex-col gap-3">
-              <div className="flex items-center gap-4 mb-2">
-                <div className="p-3 bg-blue-600 rounded-full shadow-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-blue-900 mb-1">{agency.name}</h2>
-                  <span className="text-base font-semibold text-gray-600">{agency.code}</span>
-                </div>
-                <span className={`ml-auto px-4 py-1 rounded-full text-sm font-bold shadow-lg ${agency.type.name === 'Cấp 1' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{agency.type.name}</span>
-              </div>
-              <div className="flex flex-col gap-1 text-gray-700 text-base">
-                <span><b>Quận/Huyện:</b> {agency.district}</span>
-                <span><b>Địa chỉ:</b> {agency.address}</span>
-                <span><b>Điện thoại:</b> {agency.phone}</span>
-                <span><b>Email:</b> {agency.email}</span>
-              </div>
-            </div>
-          ))}
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* Total Revenue */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h3 className="text-gray-600 font-medium mb-2">Tổng doanh số</h3>
+            <p className="text-2xl font-bold text-blue-600">
+              {formatCurrency(totalRevenue)}
+            </p>
+          </div>
+
+          {/* Total Debt */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h3 className="text-gray-600 font-medium mb-2">Tổng nợ</h3>
+            <p className="text-2xl font-bold text-red-600">
+              {formatCurrency(totalDebt)}
+            </p>
+          </div>
+
+          {/* Report Count */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h3 className="text-gray-600 font-medium mb-2">Số lượng báo cáo</h3>
+            <p className="text-2xl font-bold text-gray-900">
+              {reportCount}
+            </p>
+          </div>
+        </div>
+
+        {/* Reports Table */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Danh sách báo cáo</h2>
+            <Link
+              to="/reports/add"
+              className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Lập báo cáo
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Mã báo cáo</th>
+                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Loại báo cáo</th>
+                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Ngày báo cáo</th>
+                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Dữ liệu báo cáo</th>
+                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Người tạo</th>
+                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Ngày tạo</th>
+                  <th className="py-3 px-4 text-left text-gray-600 font-medium">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reports.map((report, index) => (
+                  <tr key={report.id} className={index < reports.length - 1 ? "border-b border-gray-100" : ""}>
+                    <td className="px-4 py-4 font-semibold text-gray-900">
+                      {report.id}
+                    </td>
+                    <td className="px-4 py-4">
+                      {getTypeBadge(report.type)}
+                    </td>
+                    <td className="px-4 py-4 text-gray-700">
+                      {report.reportDate}
+                    </td>
+                    <td className="px-4 py-4 text-gray-700">
+                      {formatCurrency(report.amount)}
+                    </td>
+                    <td className="px-4 py-4 text-gray-700">
+                      {report.creator}
+                    </td>
+                    <td className="px-4 py-4 text-gray-700">
+                      {report.createdDate}
+                    </td>
+                    <td className="px-4 py-4">
+                      <Link
+                        to={`/reports/detail/${report.id}`}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Xem chi tiết
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </DashboardLayout>
   );
 };
 
-export default SearchPage;
+export default ReportsPage;
