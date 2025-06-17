@@ -22,7 +22,7 @@ import DistributionRequestPage from './distribution';
 import AddReportPage from './reports/add';
 import ReportDetailPage from './reports/detail';
 import NotFound from './NotFound';
-import AgencyProfilePage from '../agency-profile';
+import AgencyProfilePage from '../pages/AgencyProfile';
 import Sidebar from '../components/layout/Sidebar/Sidebar';
 
 const MainLayout = () => (

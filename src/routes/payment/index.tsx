@@ -13,11 +13,102 @@ interface PaymentRecord {
   status: 'Hoàn thành' | 'Đang xử lý' | 'Hủy';
 }
 
+// Component cho hàng trong bảng
+const PaymentRow: React.FC<{
+  record: PaymentRecord;
+  onDelete: (record: PaymentRecord) => void;
+}> = ({ record, onDelete }) => {
+  const statusColors = {
+    'Hoàn thành': 'bg-green-100 text-green-800',
+    'Đang xử lý': 'bg-yellow-100 text-yellow-800',
+    'Hủy': 'bg-red-100 text-red-800'
+  };
+
+  return (
+    <tr className="border-b border-blue-100 hover:bg-blue-50 transition-colors">
+      <td className="py-3 px-4 font-semibold text-blue-700">{record.id}</td>
+      <td className="py-3 px-4">
+        <div>
+          <div className="font-semibold text-gray-900">{record.agencyName}</div>
+          <div className="text-sm text-gray-500">{record.agencyCode}</div>
+        </div>
+      </td>
+      <td className="py-3 px-4 font-bold text-green-600">
+        {record.amount.toLocaleString('vi-VN')} VNĐ
+      </td>
+      <td className="py-3 px-4 hidden lg:table-cell">{record.paymentDate}</td>
+      <td className="py-3 px-4 hidden md:table-cell">{record.creator}</td>
+      <td className="py-3 px-4 hidden xl:table-cell">{record.createdDate}</td>
+      <td className="py-3 px-4 hidden xl:table-cell">{record.updatedDate}</td>
+      <td className="py-3 px-4">
+        <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusColors[record.status]}`}>
+          {record.status}
+        </span>
+      </td>
+      <td className="py-3 px-4">
+        <div className="flex gap-2">
+          <Link
+            to={`/payment/${record.id}`}
+            className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+          >
+            Chi tiết
+          </Link>
+          <button
+            onClick={() => onDelete(record)}
+            className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+          >
+            Xóa
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+};
+
+// Component cho modal xác nhận xóa
+const DeleteModal: React.FC<{
+  record: PaymentRecord | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ record, onConfirm, onCancel }) => {
+  if (!record) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Xác nhận xóa</h3>
+          <p className="text-gray-600 mb-6">
+            Xóa phiếu thu <strong>{record.id}</strong>?
+            <br />
+            <span className="text-sm text-red-600">Không thể hoàn tác.</span>
+          </p>
+          <div className="flex gap-3">
+            <button onClick={onCancel} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold">
+              Hủy
+            </button>
+            <button onClick={onConfirm} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold">
+              Xóa
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PaymentPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<PaymentRecord | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5; // Hiển thị 5 phiếu thu mỗi trang
 
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([
     {
@@ -54,6 +145,17 @@ const PaymentPage: React.FC = () => {
 
     return matchesSearch && matchesStatus;
   });
+  
+  // Tính toán phân trang
+  const indexOfLastRecord = currentPage * itemsPerPage;
+  const indexOfFirstRecord = indexOfLastRecord - itemsPerPage;
+  const currentRecords = filteredRecords.slice(indexOfFirstRecord, indexOfLastRecord);
+  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+  
+  // Xử lý chuyển trang
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
 
   const handleDeleteClick = (record: PaymentRecord) => {
     setRecordToDelete(record);
@@ -134,66 +236,58 @@ const PaymentPage: React.FC = () => {
 
       <h2 className="text-2xl font-extrabold text-blue-800 mb-6 drop-shadow">Danh sách phiếu thu</h2>
       
-      {/* Payment Records Table */}
+      {/* Payment Records Table - Simplified */}
       <div className="overflow-x-auto rounded-2xl shadow-xl border-2 border-blue-100 bg-white">
         <table className="min-w-full bg-white border border-blue-200">
           <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
             <tr className="uppercase text-sm">
-              <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Mã Phiếu Thu</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap min-w-[150px]">Đại Lý</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Số Tiền</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden lg:table-cell">Ngày Thu</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden md:table-cell">Người Tạo</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden xl:table-cell">Ngày Tạo</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden xl:table-cell">Cập Nhật</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px]">Trạng Thái</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Thao Tác</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Mã Phiếu Thu</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Đại Lý</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Số Tiền</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap hidden md:table-cell">Ngày Thu</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap hidden lg:table-cell">Người Tạo</th>
+              <th className="py-3 px-4 text-center whitespace-nowrap">Trạng Thái</th>
+              <th className="py-3 px-4 text-center whitespace-nowrap">Thao Tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-100">
-            {filteredRecords.map((record) => (
+            {currentRecords.map((record) => (
               <tr key={record.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{record.id}</td>
-                <td className="px-4 py-3 text-gray-800">
-                  <div className="max-w-[150px] truncate" title={`${record.agencyCode} - ${record.agencyName}`}>
-                    {record.agencyCode} - {record.agencyName}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-gray-800 font-semibold whitespace-nowrap">{record.amount.toLocaleString('vi-VN')} VND</td>
-                <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden lg:table-cell">{new Date(record.paymentDate).toLocaleDateString('vi-VN')}</td>
-                <td className="px-4 py-3 text-gray-800 hidden md:table-cell">
-                  <div className="max-w-[100px] truncate" title={record.creator}>
-                    {record.creator}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden xl:table-cell">{new Date(record.createdDate).toLocaleDateString('vi-VN')}</td>
-                <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden xl:table-cell">{new Date(record.updatedDate).toLocaleDateString('vi-VN')}</td>
+                <td className="px-4 py-3 font-semibold text-blue-700">{record.id}</td>
                 <td className="px-4 py-3">
-                  <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold ${getStatusColor(record.status)}`}>
-                    <span className="hidden sm:inline">{record.status}</span>
-                    <span className="sm:hidden">{record.status === 'Hoàn thành' ? 'OK' : record.status === 'Đang xử lý' ? 'XL' : 'X'}</span>
+                  <div title={`${record.agencyName}`}>
+                    <div className="font-medium">{record.agencyName}</div>
+                    <div className="text-xs text-gray-500">{record.agencyCode}</div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VND</td>
+                <td className="px-4 py-3 whitespace-nowrap hidden md:table-cell">{record.paymentDate}</td>
+                <td className="px-4 py-3 hidden lg:table-cell">{record.creator}</td>
+                <td className="px-4 py-3 text-center">
+                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(record.status)}`}>
+                    {record.status}
                   </span>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                <td className="px-4 py-3 text-center">
+                  <div className="flex justify-center gap-2">
                     <Link
-                      to={`/payment/detail/${record.id}`}
-                      className="px-2 sm:px-3 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-center whitespace-nowrap"
+                      to={`/payment/${record.id}`}
+                      className="p-2 text-blue-600 hover:text-white bg-blue-50 hover:bg-blue-600 rounded-lg transition-colors"
+                      title="Xem chi tiết"
                     >
-                      Xem
-                    </Link>
-                    <Link
-                      to={`/payment/edit/${record.id}`}
-                      className="px-2 sm:px-3 py-1 text-xs font-bold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-center whitespace-nowrap"
-                    >
-                      <span className="hidden sm:inline">Chỉnh sửa</span>
-                      <span className="sm:hidden">Sửa</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
                     </Link>
                     <button
                       onClick={() => handleDeleteClick(record)}
-                      className="px-2 sm:px-3 py-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 rounded-lg transition-colors whitespace-nowrap"
+                      className="p-2 text-red-600 hover:text-white bg-red-50 hover:bg-red-600 rounded-lg transition-colors"
+                      title="Xóa phiếu thu"
                     >
-                      Xóa
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
                     </button>
                   </div>
                 </td>
@@ -206,6 +300,41 @@ const PaymentPage: React.FC = () => {
       {filteredRecords.length === 0 && (
         <div className="text-center py-8">
           <p className="text-gray-500 text-lg">Không tìm thấy phiếu thu nào.</p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {filteredRecords.length > itemsPerPage && (
+        <div className="flex justify-center mt-6">
+          <nav className="inline-flex rounded-lg shadow-sm">
+            <button 
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-l-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              &laquo;
+            </button>
+            {[...Array(totalPages)].map((_, index) => (
+              <button
+                key={index}
+                onClick={() => handlePageChange(index + 1)}
+                className={`px-4 py-2 border border-gray-300 ${
+                  currentPage === index + 1 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {index + 1}
+              </button>
+            ))}
+            <button 
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 rounded-r-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              &raquo;
+            </button>
+          </nav>
         </div>
       )}
 
