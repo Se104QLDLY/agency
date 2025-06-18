@@ -32,6 +32,11 @@ export const useLoginForm = () => {
     setIsLoggedIn(true);
     setUserName(data.username);
     
+    // Navigate to root path for all roles (fix redirect issue)
+    navigate('/');
+    
+    // Keep this for future reference
+    /*
     // Navigate based on login type
     switch (loginType) {
       case 'admin':
@@ -49,6 +54,7 @@ export const useLoginForm = () => {
       default:
         navigate('/');
     }
+    */
   };
 
   const handleLogout = () => {

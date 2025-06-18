@@ -23,7 +23,7 @@ import AddReportPage from './reports/add';
 import ReportDetailPage from './reports/detail';
 import ReportsIndexPage from './reports';
 import NotFound from './NotFound';
-import AgencyProfilePage from '../agency-profile';
+import AgencyProfilePage from './agency-profile';
 import { DashboardLayout } from '../components/layout/DashboardLayout/DashboardLayout';
 
 const MainLayout = () => (
