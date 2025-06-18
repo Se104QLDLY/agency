@@ -42,6 +42,12 @@ code {
     monospace;
 }
 
+/* Đảm bảo #root không bị giới hạn chiều cao */
+#root {
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
 /* Custom utilities for text handling and responsive design */
 @layer utilities {
   /* Text handling utilities */

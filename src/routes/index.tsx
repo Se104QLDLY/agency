@@ -21,17 +21,15 @@ import EditAgencyPage from './agencies/edit';
 import DistributionRequestPage from './distribution';
 import AddReportPage from './reports/add';
 import ReportDetailPage from './reports/detail';
+import ReportsIndexPage from './reports';
 import NotFound from './NotFound';
 import AgencyProfilePage from '../agency-profile';
-import Sidebar from '../components/layout/Sidebar/Sidebar';
+import { DashboardLayout } from '../components/layout/DashboardLayout/DashboardLayout';
 
 const MainLayout = () => (
-  <div style={{ display: 'flex', minHeight: '100vh' }}>
-    <Sidebar />
-    <div style={{ flex: 1, padding: 24 }}>
-      <Outlet />
-    </div>
-  </div>
+  <DashboardLayout>
+    <Outlet />
+  </DashboardLayout>
 );
 
 const AppRoutes = () => {
@@ -68,6 +66,7 @@ const AppRoutes = () => {
 
         <Route path="distribution" element={<DistributionRequestPage />} />
 
+        <Route path="reports" element={<ReportsIndexPage />} />
         <Route path="reports/add" element={<AddReportPage />} />
         <Route path="reports/detail/:id" element={<ReportDetailPage />} />
 

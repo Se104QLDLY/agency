@@ -61,7 +61,6 @@ export const Modal: React.FC<ModalProps> = ({
             relative w-full ${sizeClasses[size]} 
             bg-white rounded-2xl shadow-2xl 
             transform transition-all
-            max-h-[90vh] overflow-hidden
           `}
           onClick={(e) => e.stopPropagation()}
         >
@@ -99,7 +98,7 @@ export const Modal: React.FC<ModalProps> = ({
           )}
           
           {/* Content */}
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)]">
+          <div className="overflow-y-auto" style={{ maxHeight: 'none' }}>
             {children}
           </div>
         </div>
@@ -108,4 +107,4 @@ export const Modal: React.FC<ModalProps> = ({
   );
 };
 
-export default Modal; 
+export default Modal;

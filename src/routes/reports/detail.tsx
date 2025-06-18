@@ -46,18 +46,25 @@ const ReportDetailPage: React.FC = () => {
   };
 
   const getTypeBadge = (type: string) => {
-    if (type === 'Doanh số') {
-      return (
-        <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-lg">
-          Báo cáo doanh số
-        </span>
-      );
-    } else {
-      return (
-        <span className="inline-block px-3 py-1 bg-red-100 text-red-800 text-sm font-semibold rounded-lg">
-          Báo cáo công nợ
-        </span>
-      );
+    switch (type) {
+      case 'Doanh thu':
+        return (
+          <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-lg">Doanh thu</span>
+        );
+      case 'Công nợ':
+        return (
+          <span className="inline-block px-3 py-1 bg-red-100 text-red-800 text-sm font-semibold rounded-lg">Công nợ</span>
+        );
+      case 'Tồn kho':
+        return (
+          <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-lg">Tồn kho</span>
+        );
+      case 'Hoạt động':
+        return (
+          <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 text-sm font-semibold rounded-lg">Hoạt động</span>
+        );
+      default:
+        return null;
     }
   };
 
@@ -70,7 +77,7 @@ const ReportDetailPage: React.FC = () => {
             CHI TIẾT BÁO CÁO - {reportData.id}
           </h1>
           <Link
-            to="/search"
+            to="/reports"
             className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">

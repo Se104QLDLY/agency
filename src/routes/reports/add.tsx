@@ -56,7 +56,7 @@ const AddReportPage: React.FC = () => {
       console.log('Report data:', data);
       
       alert('Báo cáo đã được tạo thành công!');
-      navigate('/search'); // Quay về trang danh sách báo cáo
+      navigate('/reports'); // Quay về trang danh sách báo cáo
     } catch (error) {
       console.error('Error creating report:', error);
       alert('Có lỗi xảy ra khi tạo báo cáo!');

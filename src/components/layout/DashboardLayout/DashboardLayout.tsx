@@ -78,19 +78,18 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex min-h-screen bg-gray-50" style={{ overflow: 'visible' }}>
       <Sidebar />
       
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0" style={{ overflow: 'visible' }}>
         <MobileHeader onToggleSidebar={toggleSidebar} />
         
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1" style={{ overflow: 'visible', minHeight: 'auto' }}>
           <div className="p-4 md:p-6 relative">
             {/* Desktop user account */}
-            <div className="hidden md:block absolute top-4 right-4 z-20">
+            <div className="hidden md:block absolute top-4 right-4 z-50">
               <UserAccount />
             </div>
-            
             {/* Content with proper spacing */}
             <div className="md:pt-10">
               <div className="max-w-full">
@@ -104,4 +103,4 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   );
 };
 
-export default DashboardLayout; 
+export default DashboardLayout;
