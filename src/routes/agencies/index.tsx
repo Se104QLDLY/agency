@@ -1,244 +1,101 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
-interface Agency {
-  id: string;
-  code: string;
-  name: string;
-  type: {
-    id: number;
-    name: string;
-  };
-  district: string;
-  address: string;
-  phone: string;
-  email: string;
-  createdDate: string;
-  updatedDate: string;
-}
+// Giả lập dữ liệu đại lý (có thể thay bằng API thực tế)
+const mockAgency = {
+  id: 'DL001',
+  name: 'Đại lý Hà Nội',
+  address: '123 Đường ABC, Quận 1, Hà Nội',
+  phone: '0123 456 789',
+  email: 'dailyhanoi@example.com',
+  owner: 'Nguyễn Văn A',
+  taxCode: '123456789',
+};
 
-const AgencyPage: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [agencyToDelete, setAgencyToDelete] = useState<Agency | null>(null);
-  const navigate = useNavigate();
+const AgencyProfilePage: React.FC = () => {
+  const [form, setForm] = useState(mockAgency);
+  const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
 
-  // Mock data for agencies
-  const [agencies, setAgencies] = useState<Agency[]>([
-    {
-      id: '1',
-      code: 'DL001',
-      name: 'Đại lý Minh Anh',
-      type: {
-        id: 1,
-        name: 'Cấp 1'
-      },
-      district: 'Quận 1',
-      address: '123 Nguyễn Huệ',
-      phone: '0901234567',
-      email: 'minhanh@email.com',
-      createdDate: '2024-01-15',
-      updatedDate: '2024-01-20'
-    },
-    {
-      id: '2',
-      code: 'DL002',
-      name: 'Đại lý Thành Công',
-      type: {
-        id: 2,
-        name: 'Cấp 2'
-      },
-      district: 'Quận 3',
-      address: '456 Lê Lợi',
-      phone: '0907654321',
-      email: 'thanhcong@email.com',
-      createdDate: '2024-01-10',
-      updatedDate: '2024-01-18'
-    }
-  ]);
-
-  const filteredAgencies = agencies.filter(agency => 
-    agency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agency.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agency.district.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleDeleteClick = (agency: Agency) => {
-    setAgencyToDelete(agency);
-    setShowDeleteModal(true);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleDeleteConfirm = async () => {
-    if (agencyToDelete) {
-      try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Remove from local state
-        setAgencies(agencies.filter(a => a.id !== agencyToDelete.id));
-        
-        // Close modal and reset
-        setShowDeleteModal(false);
-        setAgencyToDelete(null);
-        
-        alert(`Đã xóa đại lý ${agencyToDelete.code} thành công!`);
-      } catch (error) {
-        console.error('Error deleting agency:', error);
-        alert('Có lỗi xảy ra khi xóa đại lý!');
-      }
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setShowDeleteModal(false);
-    setAgencyToDelete(null);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setEditing(false);
+      setSuccess('Cập nhật hồ sơ thành công!');
+      setTimeout(() => setSuccess(''), 2000);
+    }, 800);
   };
 
   return (
-    <DashboardLayout>
-      <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-blue-100">
-        <h1 className="text-3xl font-extrabold text-blue-800 mb-8 drop-shadow uppercase tracking-wide">Quản lý đại lý</h1>
-        
-        {/* Search and Add Button */}
-        <div className="flex flex-wrap gap-4 mb-8 justify-between items-center">
-          <input
-            type="text"
-            placeholder="Tìm kiếm đại lý..."
-            className="flex-1 min-w-[220px] px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <Link
-            to="/agencies/add"
-            className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            <span className="hidden sm:inline">Thêm đại lý</span>
-            <span className="sm:hidden">Thêm</span>
-          </Link>
-        </div>
-
-        <h2 className="text-2xl font-extrabold text-blue-800 mb-6 drop-shadow">Danh sách đại lý</h2>
-        
-        {/* Agencies Table */}
-        <div className="overflow-x-auto rounded-2xl shadow-xl border-2 border-blue-100 bg-white">
-          <table className="min-w-full bg-white border border-blue-200">
-            <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
-              <tr className="uppercase text-sm">
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px]">Mã đại lý</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[150px]">Tên đại lý</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px]">Loại đại lý</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px] hidden lg:table-cell">Quận/Huyện</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[200px] hidden xl:table-cell">Địa chỉ</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[130px] hidden md:table-cell">Số điện thoại</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[150px] hidden lg:table-cell">Email</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden xl:table-cell">Ngày tạo</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden xl:table-cell">Cập nhật</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-blue-100">
-              {filteredAgencies.map((agency) => (
-                <tr key={agency.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{agency.code}</td>
-                  <td className="px-4 py-3 font-semibold text-gray-900">
-                    <div className="max-w-[200px] truncate" title={agency.name}>
-                      {agency.name}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`px-3 py-1 rounded-full text-sm font-bold shadow-lg ${agency.type.name === 'Cấp 1' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{agency.type.name}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden lg:table-cell">{agency.district}</td>
-                  <td className="px-4 py-3 text-gray-800 hidden xl:table-cell">
-                    <div className="max-w-[250px] truncate" title={agency.address}>
-                      {agency.address}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden md:table-cell">{agency.phone}</td>
-                  <td className="px-4 py-3 text-gray-800 hidden lg:table-cell">
-                    <div className="max-w-[180px] truncate" title={agency.email}>
-                      {agency.email}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden xl:table-cell">{new Date(agency.createdDate).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden xl:table-cell">{new Date(agency.updatedDate).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-                      <Link
-                        to={`/agencies/view/${agency.id}`}
-                        className="px-2 sm:px-3 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-center whitespace-nowrap"
-                      >
-                        <span className="hidden sm:inline">Xem chi tiết</span>
-                        <span className="sm:hidden">Xem</span>
-                      </Link>
-                      <Link
-                        to={`/agencies/edit/${agency.id}`}
-                        className="px-2 sm:px-3 py-1 text-xs font-bold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-center whitespace-nowrap"
-                      >
-                        <span className="hidden sm:inline">Chỉnh sửa</span>
-                        <span className="sm:hidden">Sửa</span>
-                      </Link>
-                      <button
-                        onClick={() => handleDeleteClick(agency)}
-                        className="px-2 sm:px-3 py-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 rounded-lg transition-colors whitespace-nowrap"
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredAgencies.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-500 text-lg">Không tìm thấy đại lý nào.</p>
+    <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-2xl p-12 border-2 border-blue-100 mt-10">
+      <form onSubmit={handleSubmit}>
+        <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
+          <div className="flex-shrink-0 flex flex-col items-center">
+            <div className="bg-blue-200 p-4 rounded-full shadow-lg mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </div>
+            <div className="text-blue-700 font-bold text-lg">{form.name}</div>
+            <div className="text-blue-400 text-sm">Mã: {form.id}</div>
           </div>
-        )}
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-              <div className="text-center">
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Xác nhận xóa đại lý</h3>
-                <p className="text-gray-600 mb-6">
-                  Bạn có chắc chắn muốn xóa đại lý <strong>{agencyToDelete?.code} - {agencyToDelete?.name}</strong>?
-                  <br />
-                  <span className="text-sm text-red-600">Hành động này không thể hoàn tác.</span>
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleDeleteCancel}
-                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
-                  >
-                    Hủy bỏ
-                  </button>
-                  <button
-                    onClick={handleDeleteConfirm}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
-                  >
-                    Xóa đại lý
-                  </button>
-                </div>
+          <div className="flex-1">
+            <h1 className="text-4xl font-extrabold text-blue-800 drop-shadow uppercase tracking-wide mb-2">HỒ SƠ ĐẠI LÝ</h1>
+            <div className="text-blue-500 font-semibold mb-4">Thông tin tổng quan đại lý</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block font-semibold mb-1 text-blue-700">Tên đại lý</label>
+                <input type="text" name="name" value={form.name} onChange={handleChange} disabled={!editing} className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg shadow-sm" />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-blue-700">Chủ đại lý</label>
+                <input type="text" name="owner" value={form.owner} onChange={handleChange} disabled={!editing} className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg shadow-sm" />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-green-700">Số điện thoại</label>
+                <input type="text" name="phone" value={form.phone} onChange={handleChange} disabled={!editing} className="w-full px-4 py-3 border-2 border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-lg shadow-sm" />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-green-700">Email</label>
+                <input type="email" name="email" value={form.email} onChange={handleChange} disabled={!editing} className="w-full px-4 py-3 border-2 border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-lg shadow-sm" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block font-semibold mb-1 text-blue-700">Địa chỉ</label>
+                <input type="text" name="address" value={form.address} onChange={handleChange} disabled={!editing} className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg shadow-sm" />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-yellow-700">Mã số thuế</label>
+                <input type="text" name="taxCode" value={form.taxCode} onChange={handleChange} disabled={!editing} className="w-full px-4 py-3 border-2 border-yellow-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-lg shadow-sm" />
               </div>
             </div>
+            {success && <div className="text-green-600 font-semibold mt-4">{success}</div>}
+            <div className="flex justify-end gap-4 mt-8">
+              {!editing ? (
+                <button type="button" className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-lg shadow-md flex items-center gap-2" onClick={() => setEditing(true)}>
+                  <svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' fill='none' viewBox='0 0 20 20' stroke='currentColor'><path d='M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z' /></svg>
+                  Chỉnh sửa
+                </button>
+              ) : (
+                <>
+                  <button type="button" className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-bold text-lg shadow-md" onClick={() => setEditing(false)} disabled={loading}>
+                    Hủy
+                  </button>
+                  <button type="submit" className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-lg shadow-md flex items-center gap-2" disabled={loading}>
+                    {loading && <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>}
+                    Lưu thay đổi
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        )}
-      </div>
-    </DashboardLayout>
+        </div>
+      </form>
+    </div>
   );
 };
 
-export default AgencyPage;
+export default AgencyProfilePage;

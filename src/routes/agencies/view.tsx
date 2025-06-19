@@ -99,8 +99,13 @@ const ViewAgencyPage: React.FC = () => {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Basic Info */}
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-100">
-            <h2 className="text-xl font-bold text-blue-800 mb-4">Thông tin cơ bản</h2>
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-100 shadow-lg hover:shadow-2xl transition-shadow duration-300">
+            <div className="flex items-center mb-4">
+              <div className="bg-blue-200 p-3 rounded-full mr-3">
+                <svg xmlns='http://www.w3.org/2000/svg' className='h-7 w-7 text-blue-700' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z' /></svg>
+              </div>
+              <h2 className="text-xl font-bold text-blue-800">Thông tin cơ bản</h2>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-blue-700 font-semibold mb-1">Mã đại lý</label>
@@ -108,9 +113,7 @@ const ViewAgencyPage: React.FC = () => {
               </div>
               <div>
                 <label className="block text-blue-700 font-semibold mb-1">Loại đại lý</label>
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${getTypeColor(agency.type.name)}`}>
-                  {agency.type.name}
-                </span>
+                <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold border-2 ${getTypeColor(agency.type.name)} shadow-md`}>{agency.type.name}</span>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-blue-700 font-semibold mb-1">Tên đại lý</label>
@@ -128,16 +131,25 @@ const ViewAgencyPage: React.FC = () => {
                 <label className="block text-blue-700 font-semibold mb-1">Người quản lý</label>
                 <p className="bg-white px-4 py-2 rounded-lg border text-gray-800">{agency.manager || 'Chưa có thông tin'}</p>
               </div>
+              <div className="md:col-span-2 flex items-center gap-3 mt-2">
+                <span className={`px-4 py-1 rounded-full font-bold text-base border-2 ${getStatusColor(agency.status)} shadow`}>{agency.status}</span>
+              </div>
             </div>
           </div>
 
           {/* Contact Info */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-100">
-            <h2 className="text-xl font-bold text-green-800 mb-4">Thông tin liên hệ</h2>
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-100 shadow-lg hover:shadow-2xl transition-shadow duration-300">
+            <div className="flex items-center mb-4">
+              <div className="bg-green-200 p-3 rounded-full mr-3">
+                <svg xmlns='http://www.w3.org/2000/svg' className='h-7 w-7 text-green-700' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' /></svg>
+              </div>
+              <h2 className="text-xl font-bold text-green-800">Thông tin liên hệ</h2>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-green-700 font-semibold mb-1">Số điện thoại</label>
-                <div className="bg-white px-4 py-2 rounded-lg border">
+                <div className="bg-white px-4 py-2 rounded-lg border flex items-center gap-2">
+                  <svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5 text-blue-500' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 5a2 2 0 012-2h2.28a2 2 0 011.789 1.106l1.387 2.773a2 2 0 01-.327 2.327l-1.516 1.516a16.001 16.001 0 006.586 6.586l1.516-1.516a2 2 0 012.327-.327l2.773 1.387A2 2 0 0121 18.72V21a2 2 0 01-2 2h-1C9.163 23 1 14.837 1 5V4a2 2 0 012-2z' /></svg>
                   <a href={`tel:${agency.phone}`} className="text-blue-600 hover:text-blue-800 font-semibold">
                     {agency.phone}
                   </a>
@@ -145,7 +157,8 @@ const ViewAgencyPage: React.FC = () => {
               </div>
               <div>
                 <label className="block text-green-700 font-semibold mb-1">Email</label>
-                <div className="bg-white px-4 py-2 rounded-lg border">
+                <div className="bg-white px-4 py-2 rounded-lg border flex items-center gap-2">
+                  <svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5 text-blue-500' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M16 12H8m8 0a4 4 0 11-8 0 4 4 0 018 0zm-8 0V8a4 4 0 018 0v4' /></svg>
                   <a href={`mailto:${agency.email}`} className="text-blue-600 hover:text-blue-800 font-semibold">
                     {agency.email}
                   </a>
@@ -155,8 +168,13 @@ const ViewAgencyPage: React.FC = () => {
           </div>
 
           {/* Financial Info */}
-          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 border-2 border-yellow-100">
-            <h2 className="text-xl font-bold text-yellow-800 mb-4">Thông tin tài chính</h2>
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 border-2 border-yellow-100 shadow-lg hover:shadow-2xl transition-shadow duration-300">
+            <div className="flex items-center mb-4">
+              <div className="bg-yellow-200 p-3 rounded-full mr-3">
+                <svg xmlns='http://www.w3.org/2000/svg' className='h-7 w-7 text-yellow-700' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 10c-4.418 0-8-1.79-8-4V7a4 4 0 014-4h8a4 4 0 014 4v7c0 2.21-3.582 4-8 4z' /></svg>
+              </div>
+              <h2 className="text-xl font-bold text-yellow-800">Thông tin tài chính</h2>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-yellow-700 font-semibold mb-1">Nợ hiện tại</label>

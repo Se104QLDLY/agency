@@ -23,7 +23,6 @@ import AddReportPage from './reports/add';
 import ReportDetailPage from './reports/detail';
 import ReportsIndexPage from './reports';
 import NotFound from './NotFound';
-import AgencyProfilePage from './agency-profile';
 import { DashboardLayout } from '../components/layout/DashboardLayout/DashboardLayout';
 
 const MainLayout = () => (
@@ -69,8 +68,6 @@ const AppRoutes = () => {
         <Route path="reports" element={<ReportsIndexPage />} />
         <Route path="reports/add" element={<AddReportPage />} />
         <Route path="reports/detail/:id" element={<ReportDetailPage />} />
-
-        <Route path="agency-profile" element={<AgencyProfilePage />} />
 
         {/* 404 page */}
         <Route path="*" element={<NotFound />} />
