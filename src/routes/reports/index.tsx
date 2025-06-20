@@ -264,7 +264,21 @@ const ReportsIndexPage: React.FC = () => {
             ))}
             {/* X labels */}
             {['01/2024', '02/2024', '04/2024', '05/2024'].map((label, idx) => (
-              <text key={label} x={100+idx*70} y="245" textAnchor="middle" fontSize="15" fill="#64748b">{label}</text>
+              <text
+                key={label}
+                x={100 + idx * 80}
+                y="235"
+                textAnchor="middle"
+                fontSize="17"
+                fontWeight="bold"
+                fill="#1e293b"
+                stroke="#fff"
+                strokeWidth="0.8"
+                paintOrder="stroke"
+                style={{ letterSpacing: 1 }}
+              >
+                {label}
+              </text>
             ))}
             {/* Y labels */}
             {[0, 50, 100, 150, 200].map((v, i) => (
@@ -339,7 +353,21 @@ const ReportsIndexPage: React.FC = () => {
             ))}
             {/* X labels */}
             {['01/2024', '02/2024', '04/2024', '05/2024'].map((label, idx) => (
-              <text key={label} x={100+idx*70} y="245" textAnchor="middle" fontSize="15" fill="#64748b">{label}</text>
+              <text
+                key={label}
+                x={100 + idx * 80}
+                y="235"
+                textAnchor="middle"
+                fontSize="17"
+                fontWeight="bold"
+                fill="#1e293b"
+                stroke="#fff"
+                strokeWidth="0.8"
+                paintOrder="stroke"
+                style={{ letterSpacing: 1 }}
+              >
+                {label}
+              </text>
             ))}
             {/* Y labels */}
             {[0, 50, 100, 150, 200].map((v, i) => (

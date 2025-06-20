@@ -3,14 +3,12 @@ import { Link } from 'react-router-dom';
 
 interface PaymentRecord {
   id: string;
-  agencyCode: string;
-  agencyName: string;
-  amount: number;
+  agency: string;
+  address: string;
+  phone: string;
+  email: string;
   paymentDate: string;
-  creator: string;
-  createdDate: string;
-  updatedDate: string;
-  status: 'Hoàn thành' | 'Đang xử lý' | 'Hủy';
+  amount: number;
 }
 
 // Component cho hàng trong bảng
@@ -29,26 +27,20 @@ const PaymentRow: React.FC<{
       <td className="py-3 px-4 font-semibold text-blue-700">{record.id}</td>
       <td className="py-3 px-4">
         <div>
-          <div className="font-semibold text-gray-900">{record.agencyName}</div>
-          <div className="text-sm text-gray-500">{record.agencyCode}</div>
+          <div className="font-semibold text-gray-900">{record.agency}</div>
+          <div className="text-sm text-gray-500">{record.address}</div>
         </div>
       </td>
       <td className="py-3 px-4 font-bold text-green-600">
         {record.amount.toLocaleString('vi-VN')} VNĐ
       </td>
       <td className="py-3 px-4 hidden lg:table-cell">{record.paymentDate}</td>
-      <td className="py-3 px-4 hidden md:table-cell">{record.creator}</td>
-      <td className="py-3 px-4 hidden xl:table-cell">{record.createdDate}</td>
-      <td className="py-3 px-4 hidden xl:table-cell">{record.updatedDate}</td>
-      <td className="py-3 px-4">
-        <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusColors[record.status]}`}>
-          {record.status}
-        </span>
-      </td>
+      <td className="py-3 px-4 hidden md:table-cell">{record.phone}</td>
+      <td className="py-3 px-4 hidden xl:table-cell">{record.email}</td>
       <td className="py-3 px-4">
         <div className="flex gap-2">
           <Link
-            to={`/payment/${record.id}`}
+            to={`/payment/detail/${record.id}`}
             className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
           >
             Chi tiết
@@ -113,38 +105,30 @@ const PaymentPage: React.FC = () => {
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([
     {
       id: 'PT001',
-      agencyCode: 'DL001',
-      agencyName: 'Đại lý Hà Nội',
-      amount: 5000000,
+      agency: 'Đại lý Hà Nội',
+      address: '123 Nguyễn Văn Linh, Q.7, TP.HCM',
+      phone: '0901234567',
+      email: 'hanoi@example.com',
       paymentDate: '2024-01-15',
-      creator: 'Nguyễn Văn A',
-      createdDate: '2024-01-15',
-      updatedDate: '2024-01-15',
-      status: 'Hoàn thành'
+      amount: 5000000,
     },
     {
       id: 'PT002',
-      agencyCode: 'DL002',
-      agencyName: 'Đại lý Hồ Chí Minh',
-      amount: 3500000,
+      agency: 'Đại lý Hồ Chí Minh',
+      address: '456 Lê Lợi, Q.1, TP.HCM',
+      phone: '0902345678',
+      email: 'hcm@example.com',
       paymentDate: '2024-01-14',
-      creator: 'Trần Thị B',
-      createdDate: '2024-01-14',
-      updatedDate: '2024-01-14',
-      status: 'Đang xử lý'
-    }
+      amount: 3500000,
+    },
   ]);
 
-  const filteredRecords = paymentRecords.filter(record => {
-    const matchesSearch = 
-      record.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.agencyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.agencyCode.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = selectedStatus === 'all' || record.status === selectedStatus;
-
-    return matchesSearch && matchesStatus;
-  });
+  const filteredRecords = paymentRecords.filter(record =>
+    record.agency.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.phone.includes(searchTerm) ||
+    record.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   
   // Tính toán phân trang
   const indexOfLastRecord = currentPage * itemsPerPage;
@@ -212,17 +196,7 @@ const PaymentPage: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <select
-          value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value)}
-          className="px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
-        >
-          <option value="all">Tất cả trạng thái</option>
-          <option value="Hoàn thành">Hoàn thành</option>
-          <option value="Đang xử lý">Đang xử lý</option>
-          <option value="Hủy">Hủy</option>
-        </select>
-        <Link
+        {/* <Link
           to="/payment/add"
           className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
         >
@@ -231,7 +205,7 @@ const PaymentPage: React.FC = () => {
           </svg>
           <span className="hidden sm:inline">Thêm phiếu thu</span>
           <span className="sm:hidden">Thêm</span>
-        </Link>
+        </Link> */}
       </div>
 
       <h2 className="text-2xl font-extrabold text-blue-800 mb-6 drop-shadow">Danh sách phiếu thu</h2>
@@ -241,37 +215,28 @@ const PaymentPage: React.FC = () => {
         <table className="min-w-full bg-white border border-blue-200">
           <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
             <tr className="uppercase text-sm">
-              <th className="py-3 px-4 text-left whitespace-nowrap">Mã Phiếu Thu</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap">Đại Lý</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap">Số Tiền</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap hidden md:table-cell">Ngày Thu</th>
-              <th className="py-3 px-4 text-left whitespace-nowrap hidden lg:table-cell">Người Tạo</th>
-              <th className="py-3 px-4 text-center whitespace-nowrap">Trạng Thái</th>
-              <th className="py-3 px-4 text-center whitespace-nowrap">Thao Tác</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Đại lý</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Địa chỉ</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Điện thoại</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Email</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Ngày thu tiền</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Số tiền thu</th>
+              <th className="py-3 px-4 text-center whitespace-nowrap">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-100">
             {currentRecords.map((record) => (
               <tr key={record.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-semibold text-blue-700">{record.id}</td>
-                <td className="px-4 py-3">
-                  <div title={`${record.agencyName}`}>
-                    <div className="font-medium">{record.agencyName}</div>
-                    <div className="text-xs text-gray-500">{record.agencyCode}</div>
-                  </div>
-                </td>
+                <td className="px-4 py-3 font-semibold text-blue-700">{record.agency}</td>
+                <td className="px-4 py-3 text-gray-800">{record.address}</td>
+                <td className="px-4 py-3 text-gray-800">{record.phone}</td>
+                <td className="px-4 py-3 text-gray-800">{record.email}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{record.paymentDate}</td>
                 <td className="px-4 py-3 font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VND</td>
-                <td className="px-4 py-3 whitespace-nowrap hidden md:table-cell">{record.paymentDate}</td>
-                <td className="px-4 py-3 hidden lg:table-cell">{record.creator}</td>
-                <td className="px-4 py-3 text-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(record.status)}`}>
-                    {record.status}
-                  </span>
-                </td>
                 <td className="px-4 py-3 text-center">
                   <div className="flex justify-center gap-2">
                     <Link
-                      to={`/payment/${record.id}`}
+                      to={`/payment/detail/${record.id}`}
                       className="p-2 text-blue-600 hover:text-white bg-blue-50 hover:bg-blue-600 rounded-lg transition-colors"
                       title="Xem chi tiết"
                     >

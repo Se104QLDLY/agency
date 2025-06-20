@@ -13,7 +13,6 @@ import EditExportPage from './export/edit';
 import SearchPage from './search';
 import PaymentPage from './payment';
 import PaymentDetailPage from './payment/detail';
-import AddPaymentReceipt from './payment/add';
 import AgencyPage from './agencies';
 import AddAgencyPage from './agencies/add';
 import ViewAgencyPage from './agencies/view';
@@ -61,7 +60,6 @@ const AppRoutes = () => {
 
         <Route path="payment" element={<PaymentPage />} />
         <Route path="payment/detail/:id" element={<PaymentDetailPage />} />
-        <Route path="payment/add" element={<AddPaymentReceipt />} />
 
         <Route path="distribution" element={<DistributionRequestPage />} />
 
