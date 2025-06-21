@@ -147,7 +147,7 @@ const AddReportPage: React.FC = () => {
         {/* Hiển thị bảng nhập liệu theo loại báo cáo */}
         {reportType === 'sales' && (
           <div className="mt-8">
-            <div className="font-bold text-lg mb-2">BM6.1 - Báo Cáo Doanh Số</div>
+            <div className="font-bold text-lg mb-2">Báo Cáo Doanh Số</div>
             <table className="min-w-full border border-blue-200 rounded-xl overflow-hidden">
               <thead className="bg-blue-200 text-blue-900">
                 <tr>
@@ -177,7 +177,7 @@ const AddReportPage: React.FC = () => {
         )}
         {reportType === 'debt' && (
           <div className="mt-8">
-            <div className="font-bold text-lg mb-2">BM6.2 - Báo Cáo Công Nợ Đại Lý</div>
+            <div className="font-bold text-lg mb-2">Báo Cáo Công Nợ Đại Lý</div>
             <table className="min-w-full border border-blue-200 rounded-xl overflow-hidden">
               <thead className="bg-blue-200 text-blue-900">
                 <tr>

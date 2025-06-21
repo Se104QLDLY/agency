@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -9,9 +9,18 @@ interface ProductLine {
   unit: string;
 }
 
-interface DistributionRequestData {
+interface DistributionFormData {
   products: ProductLine[];
   deliveryAddress: string;
+}
+
+interface DistributionRequest extends DistributionFormData {
+  id: string;
+  submittedAt: string;
+  lastUpdatedAt: string;
+  status: 'processing' | 'postponed' | 'confirmed';
+  statusReason?: string;
+  forcePostponed: boolean;
 }
 
 const unitOptions = ['Thùng', 'Hộp', 'Chai', 'Gói', 'Kg', 'Lít', 'Cái'];
@@ -27,14 +36,20 @@ const schema = yup.object({
   deliveryAddress: yup.string().required('Nhập địa chỉ').min(10, 'Địa chỉ phải có ít nhất 10 ký tự'),
 });
 
+// Mock product list
+const productsList = [
+  { id: 'sp001', name: 'Sản phẩm A' },
+  { id: 'sp002', name: 'Sản phẩm B' },
+  { id: 'sp003', name: 'Sản phẩm C' },
+  { id: 'sp004', name: 'Sản phẩm D' },
+];
+
 const DistributionRequestPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [productsList] = useState([
-    { id: 'sp001', name: 'Sản phẩm A' },
-    { id: 'sp002', name: 'Sản phẩm B' },
-    { id: 'sp003', name: 'Sản phẩm C' },
-    { id: 'sp004', name: 'Sản phẩm D' },
-  ]);
+  const [requests, setRequests] = useState<DistributionRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<DistributionRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [forcePostponed, setForcePostponed] = useState(false);
 
   const {
     register,
@@ -42,7 +57,7 @@ const DistributionRequestPage: React.FC = () => {
     reset,
     control,
     formState: { errors },
-  } = useForm<DistributionRequestData>({
+  } = useForm<DistributionFormData>({
     resolver: yupResolver(schema) as any,
     defaultValues: {
       products: [{ productId: '', quantity: 1, unit: '' }],
@@ -52,29 +67,104 @@ const DistributionRequestPage: React.FC = () => {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'products' });
 
-  const addProductLine = () => {
-    append({ productId: '', quantity: 1, unit: '' });
-  };
-  const removeProductLine = (idx: number) => {
-    remove(idx);
-  };
+  // Simulate staff processing in the background
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRequests(prevRequests => {
+        const newRequests = [...prevRequests];
 
-  const onSubmit = async (data: DistributionRequestData) => {
+        // Find the first request that is 'processing' or 'postponed'
+        const requestToProcessIndex = newRequests.findIndex(r => r.status === 'processing' || (r.status === 'postponed' && Math.random() < 0.2)); // 20% chance to re-process a postponed one
+
+        if (requestToProcessIndex !== -1) {
+          const originalRequest = newRequests[requestToProcessIndex];
+
+          // Null check to satisfy linter
+          if (!originalRequest) return prevRequests;
+
+          let newStatus: DistributionRequest['status'] = originalRequest.status;
+          let newStatusReason = originalRequest.statusReason;
+          
+          if (originalRequest.status === 'processing') {
+            // Use the force toggle if it's on, otherwise use random logic
+            const isPostponed = originalRequest.forcePostponed || Math.random() < 0.3;
+
+            if (isPostponed) {
+              newStatus = 'postponed';
+              newStatusReason = 'Tạm hoãn do không đủ hàng tồn kho. Vui lòng đợi.';
+            } else {
+              newStatus = 'confirmed';
+              newStatusReason = 'Đơn hàng đã được xác nhận và đang chuẩn bị giao.';
+            }
+          } else if (originalRequest.status === 'postponed') {
+            // Do not force postponed on an already postponed order that is being re-processed
+            newStatus = 'confirmed';
+            newStatusReason = 'Đơn hàng tạm hoãn đã được xác nhận sau khi nhập kho.';
+          }
+          
+          newRequests[requestToProcessIndex] = {
+            ...originalRequest,
+            id: originalRequest.id,
+            submittedAt: originalRequest.submittedAt,
+            products: originalRequest.products,
+            deliveryAddress: originalRequest.deliveryAddress,
+            status: newStatus,
+            statusReason: newStatusReason,
+            lastUpdatedAt: new Date().toISOString(),
+            forcePostponed: false, // Flag is used, so we reset it
+          };
+          return newRequests;
+        }
+        
+        return prevRequests;
+      });
+    }, 5000); // Check for updates every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const addProductLine = () => append({ productId: '', quantity: 1, unit: '' });
+  const removeProductLine = (idx: number) => remove(idx);
+
+  const getProductName = (productId: string) => productsList.find(p => p.id === productId)?.name || 'Sản phẩm không xác định';
+
+  const onSubmit = async (data: DistributionFormData) => {
     setIsSubmitting(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Distribution request data:', data);
-      alert('Yêu cầu phân phối đã được gửi thành công!');
-      reset();
-    } catch (error) {
-      alert('Có lỗi xảy ra khi gửi yêu cầu!');
-    } finally {
-      setIsSubmitting(false);
-    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const newRequest: DistributionRequest = {
+      id: 'DH' + Date.now().toString().slice(-8),
+      products: data.products,
+      deliveryAddress: data.deliveryAddress,
+      submittedAt: new Date().toISOString(),
+      lastUpdatedAt: new Date().toISOString(),
+      status: 'processing',
+      statusReason: 'Yêu cầu của bạn đã được tiếp nhận và đang chờ xử lý.',
+      forcePostponed: forcePostponed,
+    };
+    
+    setRequests(prev => [newRequest, ...prev]);
+    reset();
+    setIsSubmitting(false);
+    setForcePostponed(false);
   };
 
-  const handleReset = () => {
-    reset();
+  const handleViewDetails = (request: DistributionRequest) => {
+    setSelectedRequest(request);
+    setIsDetailsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedRequest(null);
+  };
+
+  const getStatusInfo = (status: DistributionRequest['status']) => {
+    switch (status) {
+      case 'processing': return { text: 'Đang xử lý', color: 'blue', icon: '⏳' };
+      case 'postponed': return { text: 'Tạm hoãn', color: 'orange', icon: '⏸️' };
+      case 'confirmed': return { text: 'Đã xác nhận', color: 'green', icon: '✅' };
+    }
   };
 
   return (
@@ -88,6 +178,57 @@ const DistributionRequestPage: React.FC = () => {
           <div className="text-blue-500 font-semibold">Điền thông tin để gửi yêu cầu phân phối sản phẩm đến kho của bạn</div>
         </div>
       </div>
+
+      {/* Order History Section */}
+      {requests.length > 0 && (
+        <div className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-100 shadow-md">
+          <h2 className="text-xl font-bold text-purple-800 mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Lịch sử đơn hàng
+          </h2>
+          <div className="space-y-3 max-h-72 overflow-y-auto pr-2">
+            {requests.map((request) => {
+              const statusInfo = getStatusInfo(request.status);
+              return (
+                <div 
+                  key={request.id} 
+                  onClick={() => handleViewDetails(request)} 
+                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-200/80 cursor-pointer hover:border-indigo-300 hover:shadow-lg transition-all transform hover:-translate-y-1"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-indigo-700">{request.id}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                        statusInfo.color === 'orange' ? 'bg-orange-100 text-orange-800' :
+                        statusInfo.color === 'green' ? 'bg-green-100 text-green-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {statusInfo.text}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">{new Date(request.submittedAt).toLocaleString('vi-VN')}</span>
+                  </div>
+
+                  <div className="mt-2 pl-1">
+                    <p className="text-sm text-gray-700 truncate">
+                      {request.products.length} sản phẩm • {request.deliveryAddress}
+                    </p>
+
+                    {request.status === 'postponed' && request.statusReason && (
+                      <p className="mt-2 text-xs text-orange-800 bg-orange-50 border border-orange-200 rounded-md p-2">
+                        <span className="font-bold">Lý do:</span> {request.statusReason}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         {/* Product Lines */}
         <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-100 shadow-md">
@@ -135,15 +276,113 @@ const DistributionRequestPage: React.FC = () => {
           {errors.deliveryAddress && <span className="text-red-500 text-sm mt-1">{errors.deliveryAddress.message}</span>}
           <p className="text-gray-500 text-sm mt-1">Địa chỉ cần chi tiết để giúp việc giao hàng được nhanh chóng và chính xác hơn</p>
         </div>
+        {/* Test Tool */}
+        <div className="flex items-center justify-end gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+          <label htmlFor="forcePostponed" className="font-semibold text-sm text-yellow-800">
+            Công cụ Test:
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="forcePostponed"
+              checked={forcePostponed}
+              onChange={(e) => setForcePostponed(e.target.checked)}
+              className="h-4 w-4 rounded text-orange-600 focus:ring-orange-500 border-gray-300"
+            />
+            <label htmlFor="forcePostponed" className="text-sm text-gray-700">Buộc trạng thái "Tạm hoãn" cho yêu cầu tiếp theo</label>
+          </div>
+        </div>
         {/* Action Buttons */}
         <div className="flex gap-4 pt-6">
           <button type="submit" disabled={isSubmitting} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition-all text-lg border-2 border-transparent hover:border-blue-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
             {isSubmitting && <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>}
             {isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
           </button>
-          <button type="button" onClick={handleReset} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl shadow-lg hover:bg-gray-200 transition-all text-lg">Làm mới</button>
+          <button type="button" onClick={() => reset()} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl shadow-lg hover:bg-gray-200 transition-all text-lg">Làm mới</button>
         </div>
       </form>
+
+      {/* Order Status Modal */}
+      {isDetailsModalOpen && selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl">
+            <div className="text-center mb-6">
+              {(() => {
+                const statusInfo = getStatusInfo(selectedRequest.status);
+                return (
+                  <>
+                    <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-4 ${
+                      selectedRequest.status === 'confirmed' ? 'bg-green-100' : selectedRequest.status === 'postponed' ? 'bg-orange-100' : 'bg-blue-100'
+                    }`}>
+                      <span className={`text-3xl ${selectedRequest.status === 'confirmed' ? 'text-green-600' : selectedRequest.status === 'postponed' ? 'text-orange-600' : 'text-blue-600'}`}>
+                        {statusInfo.icon}
+                      </span>
+                    </div>
+                    <h2 className={`text-2xl font-bold mb-2 ${
+                      selectedRequest.status === 'confirmed' ? 'text-green-700' : selectedRequest.status === 'postponed' ? 'text-orange-700' : 'text-blue-700'
+                    }`}>
+                      {statusInfo.text}
+                    </h2>
+                    <p className="text-gray-600 mb-4">
+                      {selectedRequest.statusReason}
+                    </p>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Order Details */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-gray-800 mb-3">Chi tiết đơn hàng</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Mã đơn hàng:</span>
+                  <span className="font-semibold">{selectedRequest.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Thời gian gửi:</span>
+                  <span>{new Date(selectedRequest.submittedAt).toLocaleString('vi-VN')}</span>
+                </div>
+                {(selectedRequest.status === 'confirmed' || selectedRequest.status === 'postponed') && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Cập nhật lần cuối:</span>
+                    <span>{new Date(selectedRequest.lastUpdatedAt).toLocaleString('vi-VN')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Products List */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-gray-800 mb-3">Sản phẩm đã yêu cầu</h3>
+              <div className="space-y-2">
+                {selectedRequest.products.map((product, index) => (
+                  <div key={index} className="flex justify-between items-center bg-white p-2 rounded border">
+                    <span className="font-medium">{getProductName(product.productId)}</span>
+                    <span className="text-gray-600">{product.quantity} {product.unit}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Delivery Address */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-gray-800 mb-2">Địa chỉ giao hàng</h3>
+              <p className="text-gray-700">{selectedRequest.deliveryAddress}</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={closeModal}
+                className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Important Information */}
       <div className="mt-8 bg-blue-50 rounded-xl p-6 border-l-4 border-blue-400 shadow flex items-start gap-4">
         <div className="bg-blue-200 p-2 rounded-full mt-1">
@@ -155,7 +394,8 @@ const DistributionRequestPage: React.FC = () => {
             <li>• Yêu cầu sẽ được xử lý trong vòng 24-48 giờ làm việc</li>
             <li>• Số lượng yêu cầu không được vượt quá hạn mức cho phép của từng sản phẩm</li>
             <li>• Địa chỉ giao hàng phải chính xác để tránh chậm trễ trong quá trình vận chuyển</li>
-            <li>• Bạn sẽ nhận được thông báo qua email khi yêu cầu được phê duyệt</li>
+            <li>• Trạng thái đơn hàng sẽ được tự động cập nhật trong danh sách bên dưới.</li>
+            <li>• Nếu yêu cầu bị tạm hoãn, vui lòng chờ nhân viên xử lý, không cần gửi lại.</li>
           </ul>
         </div>
       </div>
