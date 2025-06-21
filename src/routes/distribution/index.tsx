@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { Package, MapPin, Clock, CheckCircle, AlertCircle, Truck, Plus, X, Send, RefreshCw, Eye, Calendar, User } from 'lucide-react';
 
 interface ProductLine {
   productId: string;
@@ -28,20 +29,19 @@ const unitOptions = ['Thùng', 'Hộp', 'Chai', 'Gói', 'Kg', 'Lít', 'Cái'];
 const schema = yup.object({
   products: yup.array().of(
     yup.object({
-      productId: yup.string().required('Chọn sản phẩm'),
-      quantity: yup.number().required('Nhập số lượng').min(1, 'Số lượng > 0'),
-      unit: yup.string().required('Chọn đơn vị'),
+      productId: yup.string().required('Vui lòng chọn sản phẩm'),
+      quantity: yup.number().required('Vui lòng nhập số lượng').min(1, 'Số lượng phải lớn hơn 0'),
+      unit: yup.string().required('Vui lòng chọn đơn vị'),
     })
-  ).min(1, 'Chọn ít nhất 1 sản phẩm'),
-  deliveryAddress: yup.string().required('Nhập địa chỉ').min(10, 'Địa chỉ phải có ít nhất 10 ký tự'),
+  ).min(1, 'Vui lòng chọn ít nhất 1 sản phẩm'),
+  deliveryAddress: yup.string().required('Vui lòng nhập địa chỉ giao hàng').min(10, 'Địa chỉ phải có ít nhất 10 ký tự'),
 });
 
-// Mock product list
 const productsList = [
-  { id: 'sp001', name: 'Sản phẩm A' },
-  { id: 'sp002', name: 'Sản phẩm B' },
-  { id: 'sp003', name: 'Sản phẩm C' },
-  { id: 'sp004', name: 'Sản phẩm D' },
+  { id: 'sp001', name: 'Sản phẩm Premium A', category: 'Cao cấp' },
+  { id: 'sp002', name: 'Sản phẩm Standard B', category: 'Tiêu chuẩn' },
+  { id: 'sp003', name: 'Sản phẩm Economy C', category: 'Phổ thông' },
+  { id: 'sp004', name: 'Sản phẩm Special D', category: 'Đặc biệt' },
 ];
 
 const DistributionRequestPage: React.FC = () => {
@@ -50,6 +50,7 @@ const DistributionRequestPage: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<DistributionRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [forcePostponed, setForcePostponed] = useState(false);
+  const [notification, setNotification] = useState<{type: 'success' | 'error' | 'info', message: string} | null>(null);
 
   const {
     register,
@@ -67,73 +68,77 @@ const DistributionRequestPage: React.FC = () => {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'products' });
 
-  // Simulate staff processing in the background
+  // Auto-processing simulation
   useEffect(() => {
     const interval = setInterval(() => {
       setRequests(prevRequests => {
         const newRequests = [...prevRequests];
-
-        // Find the first request that is 'processing' or 'postponed'
-        const requestToProcessIndex = newRequests.findIndex(r => r.status === 'processing' || (r.status === 'postponed' && Math.random() < 0.2)); // 20% chance to re-process a postponed one
+        const requestToProcessIndex = newRequests.findIndex(r => 
+          r.status === 'processing' || (r.status === 'postponed' && Math.random() < 0.2)
+        );
 
         if (requestToProcessIndex !== -1) {
           const originalRequest = newRequests[requestToProcessIndex];
-
-          // Null check to satisfy linter
           if (!originalRequest) return prevRequests;
 
           let newStatus: DistributionRequest['status'] = originalRequest.status;
           let newStatusReason = originalRequest.statusReason;
           
           if (originalRequest.status === 'processing') {
-            // Use the force toggle if it's on, otherwise use random logic
             const isPostponed = originalRequest.forcePostponed || Math.random() < 0.3;
-
             if (isPostponed) {
               newStatus = 'postponed';
-              newStatusReason = 'Tạm hoãn do không đủ hàng tồn kho. Vui lòng đợi.';
+              newStatusReason = 'Tạm hoãn do không đủ hàng tồn kho. Vui lòng chờ bổ sung hàng.';
             } else {
               newStatus = 'confirmed';
-              newStatusReason = 'Đơn hàng đã được xác nhận và đang chuẩn bị giao.';
+              newStatusReason = 'Đơn hàng đã được xác nhận và đang chuẩn bị giao hàng.';
             }
           } else if (originalRequest.status === 'postponed') {
-            // Do not force postponed on an already postponed order that is being re-processed
             newStatus = 'confirmed';
-            newStatusReason = 'Đơn hàng tạm hoãn đã được xác nhận sau khi nhập kho.';
+            newStatusReason = 'Đơn hàng đã được xác nhận sau khi bổ sung hàng tồn kho.';
           }
           
           newRequests[requestToProcessIndex] = {
             ...originalRequest,
-            id: originalRequest.id,
-            submittedAt: originalRequest.submittedAt,
-            products: originalRequest.products,
-            deliveryAddress: originalRequest.deliveryAddress,
             status: newStatus,
             statusReason: newStatusReason,
             lastUpdatedAt: new Date().toISOString(),
-            forcePostponed: false, // Flag is used, so we reset it
+            forcePostponed: false,
           };
+
+          // Show notification for status change
+          if (newStatus !== originalRequest.status) {
+            setNotification({
+              type: newStatus === 'confirmed' ? 'success' : 'info',
+              message: `Đơn hàng ${originalRequest.id} đã được cập nhật: ${newStatus === 'confirmed' ? 'Xác nhận' : 'Tạm hoãn'}`
+            });
+            setTimeout(() => setNotification(null), 5000);
+          }
+
           return newRequests;
         }
         
         return prevRequests;
       });
-    }, 5000); // Check for updates every 5 seconds
+    }, 5000);
 
     return () => clearInterval(interval);
   }, []);
 
   const addProductLine = () => append({ productId: '', quantity: 1, unit: '' });
-  const removeProductLine = (idx: number) => remove(idx);
+  const removeProductLine = (idx: number) => {
+    if (fields.length > 1) remove(idx);
+  };
 
-  const getProductName = (productId: string) => productsList.find(p => p.id === productId)?.name || 'Sản phẩm không xác định';
+  const getProductName = (productId: string) => 
+    productsList.find(p => p.id === productId)?.name || 'Sản phẩm không xác định';
 
   const onSubmit = async (data: DistributionFormData) => {
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
     const newRequest: DistributionRequest = {
-      id: 'DH' + Date.now().toString().slice(-8),
+      id: 'DH' + Date.now().toString().slice(-6),
       products: data.products,
       deliveryAddress: data.deliveryAddress,
       submittedAt: new Date().toISOString(),
@@ -147,6 +152,12 @@ const DistributionRequestPage: React.FC = () => {
     reset();
     setIsSubmitting(false);
     setForcePostponed(false);
+    
+    setNotification({
+      type: 'success',
+      message: `Đã gửi yêu cầu thành công! Mã đơn: ${newRequest.id}`
+    });
+    setTimeout(() => setNotification(null), 5000);
   };
 
   const handleViewDetails = (request: DistributionRequest) => {
@@ -159,246 +170,460 @@ const DistributionRequestPage: React.FC = () => {
     setSelectedRequest(null);
   };
 
-  const getStatusInfo = (status: DistributionRequest['status']) => {
+  const getStatusConfig = (status: DistributionRequest['status']) => {
     switch (status) {
-      case 'processing': return { text: 'Đang xử lý', color: 'blue', icon: '⏳' };
-      case 'postponed': return { text: 'Tạm hoãn', color: 'orange', icon: '⏸️' };
-      case 'confirmed': return { text: 'Đã xác nhận', color: 'green', icon: '✅' };
+      case 'processing': 
+        return { 
+          text: 'Đang xử lý', 
+          color: 'bg-blue-100 text-blue-800 border-blue-200', 
+          icon: Clock,
+          bgColor: 'bg-blue-50',
+          iconColor: 'text-blue-600'
+        };
+      case 'postponed': 
+        return { 
+          text: 'Tạm hoãn', 
+          color: 'bg-amber-100 text-amber-800 border-amber-200', 
+          icon: AlertCircle,
+          bgColor: 'bg-amber-50',
+          iconColor: 'text-amber-600'
+        };
+      case 'confirmed': 
+        return { 
+          text: 'Đã xác nhận', 
+          color: 'bg-green-100 text-green-800 border-green-200', 
+          icon: CheckCircle,
+          bgColor: 'bg-green-50',
+          iconColor: 'text-green-600'
+        };
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-2xl p-8 border-2 border-blue-100 mt-10">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="bg-blue-100 p-3 rounded-full">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 10c-4.418 0-8-1.79-8-4V7a4 4 0 014-4h8a4 4 0 014 4v7c0 2.21-3.582 4-8 4z" /></svg>
-        </div>
-        <div>
-          <h1 className="text-3xl font-extrabold text-blue-800 drop-shadow uppercase tracking-wide">Gửi yêu cầu phân phối</h1>
-          <div className="text-blue-500 font-semibold">Điền thông tin để gửi yêu cầu phân phối sản phẩm đến kho của bạn</div>
-        </div>
-      </div>
-
-      {/* Order History Section */}
-      {requests.length > 0 && (
-        <div className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-100 shadow-md">
-          <h2 className="text-xl font-bold text-purple-800 mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            Lịch sử đơn hàng
-          </h2>
-          <div className="space-y-3 max-h-72 overflow-y-auto pr-2">
-            {requests.map((request) => {
-              const statusInfo = getStatusInfo(request.status);
-              return (
-                <div 
-                  key={request.id} 
-                  onClick={() => handleViewDetails(request)} 
-                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-200/80 cursor-pointer hover:border-indigo-300 hover:shadow-lg transition-all transform hover:-translate-y-1"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold text-indigo-700">{request.id}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                        statusInfo.color === 'orange' ? 'bg-orange-100 text-orange-800' :
-                        statusInfo.color === 'green' ? 'bg-green-100 text-green-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {statusInfo.text}
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-500">{new Date(request.submittedAt).toLocaleString('vi-VN')}</span>
-                  </div>
-
-                  <div className="mt-2 pl-1">
-                    <p className="text-sm text-gray-700 truncate">
-                      {request.products.length} sản phẩm • {request.deliveryAddress}
-                    </p>
-
-                    {request.status === 'postponed' && request.statusReason && (
-                      <p className="mt-2 text-xs text-orange-800 bg-orange-50 border border-orange-200 rounded-md p-2">
-                        <span className="font-bold">Lý do:</span> {request.statusReason}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border-l-4 transition-all duration-300 ${
+          notification.type === 'success' ? 'bg-green-50 border-green-400 text-green-800' :
+          notification.type === 'error' ? 'bg-red-50 border-red-400 text-red-800' :
+          'bg-blue-50 border-blue-400 text-blue-800'
+        }`}>
+          <div className="flex items-center gap-2">
+            {notification.type === 'success' && <CheckCircle className="h-5 w-5" />}
+            {notification.type === 'error' && <AlertCircle className="h-5 w-5" />}
+            {notification.type === 'info' && <Clock className="h-5 w-5" />}
+            <span className="font-medium">{notification.message}</span>
           </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* Product Lines */}
-        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-100 shadow-md">
-          <label className="block text-blue-700 font-semibold mb-4">Danh sách sản phẩm <span className="text-red-500">*</span></label>
-          <div className="space-y-4">
-            {fields.map((item, idx) => (
-              <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
-                <div className="md:col-span-5">
-                  <label className="block text-blue-700 font-semibold mb-1">Sản phẩm</label>
-                  <select {...register(`products.${idx}.productId` as const)} className="w-full px-3 py-2 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
-                    <option value="">Chọn sản phẩm...</option>
-                    {productsList.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                  {errors.products && Array.isArray(errors.products) && errors.products[idx]?.productId && <span className="text-red-500 text-xs">{(errors.products[idx] as any)?.productId?.message}</span>}
-                </div>
-                <div className="md:col-span-3">
-                  <label className="block text-blue-700 font-semibold mb-1">Số lượng</label>
-                  <input type="number" min={1} {...register(`products.${idx}.quantity` as const)} className="w-full px-3 py-2 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg" />
-                  {errors.products && Array.isArray(errors.products) && errors.products[idx]?.quantity && <span className="text-red-500 text-xs">{(errors.products[idx] as any)?.quantity?.message}</span>}
-                </div>
-                <div className="md:col-span-3">
-                  <label className="block text-blue-700 font-semibold mb-1">Đơn vị tính</label>
-                  <select {...register(`products.${idx}.unit` as const)} className="w-full px-3 py-2 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
-                    <option value="">Chọn đơn vị</option>
-                    {unitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                  {errors.products && Array.isArray(errors.products) && errors.products[idx]?.unit && <span className="text-red-500 text-xs">{(errors.products[idx] as any)?.unit?.message}</span>}
-                </div>
-                <div className="md:col-span-1 flex justify-end">
-                  {(fields.length > 1 && idx !== fields.length - 1) && (
-                    <button type="button" onClick={() => removeProductLine(idx)} className="text-red-600 hover:text-red-800 px-2 py-1 rounded-full bg-red-50"><svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' fill='none' viewBox='0 0 20 20' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' /></svg></button>
-                  )}
-                </div>
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl mb-4 shadow-lg">
+            <Package className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Hệ thống Phân phối Hàng hóa
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Gửi yêu cầu phân phối sản phẩm một cách nhanh chóng và theo dõi trạng thái real-time
+          </p>
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Form Section */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <Send className="h-6 w-6" />
+                  Tạo yêu cầu mới
+                </h2>
+                <p className="text-blue-100 mt-1">Điền thông tin chi tiết để gửi yêu cầu phân phối</p>
               </div>
-            ))}
-          </div>
-          <button type="button" onClick={addProductLine} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"><svg xmlns='http://www.w3.org/2000/svg' className='h-4 w-4 inline-block mr-1' fill='none' viewBox='0 0 20 20' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M10 5v10m5-5H5' /></svg>Thêm sản phẩm</button>
-        </div>
-        {/* Delivery Address */}
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-100 shadow-md">
-          <label className="block text-green-700 font-semibold mb-2">Địa chỉ giao hàng <span className="text-red-500">*</span></label>
-          <textarea {...register('deliveryAddress')} rows={4} className="w-full px-4 py-3 border-2 border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg shadow-sm resize-none" />
-          {errors.deliveryAddress && <span className="text-red-500 text-sm mt-1">{errors.deliveryAddress.message}</span>}
-          <p className="text-gray-500 text-sm mt-1">Địa chỉ cần chi tiết để giúp việc giao hàng được nhanh chóng và chính xác hơn</p>
-        </div>
-        {/* Test Tool */}
-        <div className="flex items-center justify-end gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-          <label htmlFor="forcePostponed" className="font-semibold text-sm text-yellow-800">
-            Công cụ Test:
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="forcePostponed"
-              checked={forcePostponed}
-              onChange={(e) => setForcePostponed(e.target.checked)}
-              className="h-4 w-4 rounded text-orange-600 focus:ring-orange-500 border-gray-300"
-            />
-            <label htmlFor="forcePostponed" className="text-sm text-gray-700">Buộc trạng thái "Tạm hoãn" cho yêu cầu tiếp theo</label>
-          </div>
-        </div>
-        {/* Action Buttons */}
-        <div className="flex gap-4 pt-6">
-          <button type="submit" disabled={isSubmitting} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition-all text-lg border-2 border-transparent hover:border-blue-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
-            {isSubmitting && <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>}
-            {isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
-          </button>
-          <button type="button" onClick={() => reset()} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl shadow-lg hover:bg-gray-200 transition-all text-lg">Làm mới</button>
-        </div>
-      </form>
 
-      {/* Order Status Modal */}
-      {isDetailsModalOpen && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl">
-            <div className="text-center mb-6">
-              {(() => {
-                const statusInfo = getStatusInfo(selectedRequest.status);
-                return (
-                  <>
-                    <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-4 ${
-                      selectedRequest.status === 'confirmed' ? 'bg-green-100' : selectedRequest.status === 'postponed' ? 'bg-orange-100' : 'bg-blue-100'
-                    }`}>
-                      <span className={`text-3xl ${selectedRequest.status === 'confirmed' ? 'text-green-600' : selectedRequest.status === 'postponed' ? 'text-orange-600' : 'text-blue-600'}`}>
-                        {statusInfo.icon}
-                      </span>
-                    </div>
-                    <h2 className={`text-2xl font-bold mb-2 ${
-                      selectedRequest.status === 'confirmed' ? 'text-green-700' : selectedRequest.status === 'postponed' ? 'text-orange-700' : 'text-blue-700'
-                    }`}>
-                      {statusInfo.text}
-                    </h2>
-                    <p className="text-gray-600 mb-4">
-                      {selectedRequest.statusReason}
+              <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-8">
+                {/* Products Section */}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                      <Package className="h-5 w-5 text-blue-600" />
+                      Danh sách sản phẩm
+                      <span className="text-red-500">*</span>
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={addProductLine}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Thêm sản phẩm
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {fields.map((item, idx) => (
+                      <div key={item.id} className="bg-gray-50 rounded-2xl p-6 border border-gray-200 hover:border-blue-300 transition-colors">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Sản phẩm
+                            </label>
+                            <select
+                              {...register(`products.${idx}.productId` as const)}
+                              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            >
+                              <option value="">Chọn sản phẩm...</option>
+                              {productsList.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name} ({p.category})
+                                </option>
+                              ))}
+                            </select>
+                            {errors.products?.[idx]?.productId && (
+                              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                                <AlertCircle className="h-4 w-4" />
+                                {errors.products[idx]?.productId?.message}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Số lượng
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              {...register(`products.${idx}.quantity` as const)}
+                              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            />
+                            {errors.products?.[idx]?.quantity && (
+                              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                                <AlertCircle className="h-4 w-4" />
+                                {errors.products[idx]?.quantity?.message}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-end gap-2">
+                            <div className="flex-1">
+                              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Đơn vị
+                              </label>
+                              <select
+                                {...register(`products.${idx}.unit` as const)}
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              >
+                                <option value="">Chọn đơn vị</option>
+                                {unitOptions.map((u) => (
+                                  <option key={u} value={u}>{u}</option>
+                                ))}
+                              </select>
+                              {errors.products?.[idx]?.unit && (
+                                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                                  <AlertCircle className="h-4 w-4" />
+                                  {errors.products[idx]?.unit?.message}
+                                </p>
+                              )}
+                            </div>
+                            {fields.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeProductLine(idx)}
+                                className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                              >
+                                <X className="h-5 w-5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Delivery Address */}
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-green-600" />
+                    Địa chỉ giao hàng
+                    <span className="text-red-500">*</span>
+                  </h3>
+                  <div className="bg-green-50 rounded-2xl p-6 border border-green-200">
+                    <textarea
+                      {...register('deliveryAddress')}
+                      rows={4}
+                      placeholder="Nhập địa chỉ chi tiết bao gồm số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
+                      className="w-full px-4 py-3 bg-white border border-green-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors resize-none"
+                    />
+                    {errors.deliveryAddress && (
+                      <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" />
+                        {errors.deliveryAddress.message}
+                      </p>
+                    )}
+                    <p className="text-green-700 text-sm mt-2">
+                      💡 Địa chỉ chi tiết giúp quá trình giao hàng được nhanh chóng và chính xác
                     </p>
-                  </>
-                );
-              })()}
-            </div>
+                  </div>
+                </div>
 
-            {/* Order Details */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <h3 className="font-semibold text-gray-800 mb-3">Chi tiết đơn hàng</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Mã đơn hàng:</span>
-                  <span className="font-semibold">{selectedRequest.id}</span>
+                {/* Test Tools */}
+                <div className="bg-amber-50 rounded-2xl p-6 border border-amber-200">
+                  <h4 className="text-sm font-semibold text-amber-800 mb-3">🔧 Công cụ Test</h4>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={forcePostponed}
+                      onChange={(e) => setForcePostponed(e.target.checked)}
+                      className="w-4 h-4 text-amber-600 bg-white border-amber-300 rounded focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-amber-800">
+                      Buộc trạng thái "Tạm hoãn" cho yêu cầu tiếp theo
+                    </span>
+                  </label>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Thời gian gửi:</span>
-                  <span>{new Date(selectedRequest.submittedAt).toLocaleString('vi-VN')}</span>
+
+                {/* Action Buttons */}
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:transform-none"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="h-5 w-5 animate-spin" />
+                        Đang gửi yêu cầu...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-5 w-5" />
+                        Gửi yêu cầu phân phối
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => reset()}
+                    className="px-8 py-4 bg-gray-100 text-gray-700 font-bold rounded-2xl hover:bg-gray-200 transition-colors"
+                  >
+                    <RefreshCw className="h-5 w-5 inline mr-2" />
+                    Làm mới
+                  </button>
                 </div>
-                {(selectedRequest.status === 'confirmed' || selectedRequest.status === 'postponed') && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Cập nhật lần cuối:</span>
-                    <span>{new Date(selectedRequest.lastUpdatedAt).toLocaleString('vi-VN')}</span>
+              </form>
+            </div>
+          </div>
+
+          {/* Requests History */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden sticky top-6">
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Lịch sử đơn hàng
+                </h3>
+                <p className="text-purple-100 text-sm mt-1">
+                  {requests.length} yêu cầu
+                </p>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto">
+                {requests.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p className="font-medium">Chưa có yêu cầu nào</p>
+                    <p className="text-sm">Tạo yêu cầu đầu tiên của bạn</p>
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-3">
+                    {requests.map((request) => {
+                      const statusConfig = getStatusConfig(request.status);
+                      const StatusIcon = statusConfig.icon;
+                      
+                      return (
+                        <div
+                          key={request.id}
+                          onClick={() => handleViewDetails(request)}
+                          className="bg-gray-50 rounded-2xl p-4 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200 hover:border-blue-300"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-900">#{request.id}</span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
+                                {statusConfig.text}
+                              </span>
+                            </div>
+                            <StatusIcon className={`h-4 w-4 ${statusConfig.iconColor}`} />
+                          </div>
+                          
+                          <div className="space-y-2 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Package className="h-4 w-4" />
+                              <span>{request.products.length} sản phẩm</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>{new Date(request.submittedAt).toLocaleDateString('vi-VN')}</span>
+                            </div>
+                          </div>
+
+                          {request.status === 'postponed' && (
+                            <div className="mt-3 p-2 bg-amber-50 rounded-lg border border-amber-200">
+                              <p className="text-xs text-amber-800 font-medium">
+                                ⚠️ {request.statusReason}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Products List */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <h3 className="font-semibold text-gray-800 mb-3">Sản phẩm đã yêu cầu</h3>
-              <div className="space-y-2">
-                {selectedRequest.products.map((product, index) => (
-                  <div key={index} className="flex justify-between items-center bg-white p-2 rounded border">
-                    <span className="font-medium">{getProductName(product.productId)}</span>
-                    <span className="text-gray-600">{product.quantity} {product.unit}</span>
+        {/* Important Information */}
+        <div className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-8 border border-blue-200">
+          <div className="flex items-start gap-6">
+            <div className="bg-blue-600 p-3 rounded-2xl">
+              <AlertCircle className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-blue-900 mb-4">Thông tin quan trọng</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-blue-800">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-sm">Xử lý trong 24-48 giờ làm việc</span>
                   </div>
-                ))}
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    <span className="text-sm">Kiểm tra hạn mức sản phẩm</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    <span className="text-sm">Địa chỉ phải chính xác</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    <span className="text-sm">Cập nhật trạng thái tự động</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Order Details Modal */}
+      {isDetailsModalOpen && selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white rounded-t-3xl border-b border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-2xl ${getStatusConfig(selectedRequest.status).bgColor}`}>
+                    {React.createElement(getStatusConfig(selectedRequest.status).icon, {
+                      className: `h-6 w-6 ${getStatusConfig(selectedRequest.status).iconColor}`
+                    })}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Chi tiết đơn hàng #{selectedRequest.id}
+                    </h2>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium border ${getStatusConfig(selectedRequest.status).color}`}>
+                      {getStatusConfig(selectedRequest.status).text}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={closeModal}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <X className="h-6 w-6 text-gray-500" />
+                </button>
               </div>
             </div>
 
-            {/* Delivery Address */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <h3 className="font-semibold text-gray-800 mb-2">Địa chỉ giao hàng</h3>
-              <p className="text-gray-700">{selectedRequest.deliveryAddress}</p>
-            </div>
+            <div className="p-6 space-y-6">
+              {/* Status Message */}
+              <div className={`p-4 rounded-2xl border ${
+                selectedRequest.status === 'confirmed' ? 'bg-green-50 border-green-200' :
+                selectedRequest.status === 'postponed' ? 'bg-amber-50 border-amber-200' :
+                'bg-blue-50 border-blue-200'
+              }`}>
+                <p className={`font-medium ${
+                  selectedRequest.status === 'confirmed' ? 'text-green-800' :
+                  selectedRequest.status === 'postponed' ? 'text-amber-800' :
+                  'text-blue-800'
+                }`}>
+                  {selectedRequest.statusReason}
+                </p>
+              </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={closeModal}
-                className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Đóng
-              </button>
+              {/* Order Information */}
+              <div className="bg-gray-50 rounded-2xl p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                      <User className="h-5 w-5 text-blue-600" /> Mã đơn hàng
+                    </h3>
+                    <p className="text-lg font-mono text-blue-900">#{selectedRequest.id}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-indigo-600" /> Thời gian gửi
+                    </h3>
+                    <p className="text-base text-gray-700">{new Date(selectedRequest.submittedAt).toLocaleString('vi-VN')}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-green-600" /> Cập nhật lần cuối
+                    </h3>
+                    <p className="text-base text-gray-700">{new Date(selectedRequest.lastUpdatedAt).toLocaleString('vi-VN')}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-emerald-600" /> Địa chỉ giao hàng
+                    </h3>
+                    <p className="text-base text-gray-700 whitespace-pre-line">{selectedRequest.deliveryAddress}</p>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <Package className="h-5 w-5 text-blue-600" /> Danh sách sản phẩm
+                  </h3>
+                  <div className="divide-y divide-gray-200">
+                    {selectedRequest.products.map((product, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-2">
+                        <span className="font-medium text-gray-800">{getProductName(product.productId)}</span>
+                        <span className="text-gray-600">{product.quantity} {product.unit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end pt-4">
+                <button
+                  onClick={closeModal}
+                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl hover:shadow-lg hover:scale-105 transition-all"
+                >
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Important Information */}
-      <div className="mt-8 bg-blue-50 rounded-xl p-6 border-l-4 border-blue-400 shadow flex items-start gap-4">
-        <div className="bg-blue-200 p-2 rounded-full mt-1">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-blue-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-        </div>
-        <div>
-          <h3 className="text-blue-800 font-bold mb-2">Lưu ý quan trọng</h3>
-          <ul className="text-blue-700 space-y-1 text-sm">
-            <li>• Yêu cầu sẽ được xử lý trong vòng 24-48 giờ làm việc</li>
-            <li>• Số lượng yêu cầu không được vượt quá hạn mức cho phép của từng sản phẩm</li>
-            <li>• Địa chỉ giao hàng phải chính xác để tránh chậm trễ trong quá trình vận chuyển</li>
-            <li>• Trạng thái đơn hàng sẽ được tự động cập nhật trong danh sách bên dưới.</li>
-            <li>• Nếu yêu cầu bị tạm hoãn, vui lòng chờ nhân viên xử lý, không cần gửi lại.</li>
-          </ul>
-        </div>
-      </div>
     </div>
   );
 };
