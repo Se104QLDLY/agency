@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Receipt, Trash2, Eye, AlertCircle, CheckCircle, Users, Mail, Phone, MapPin, CalendarDays, DollarSign, Search, MoreVertical, Edit3, ListChecks, LayoutGrid, List } from 'lucide-react';
+import { Receipt, Trash2, Eye, AlertCircle, CheckCircle, Users, Mail, Phone, MapPin, CalendarDays, DollarSign, Search, MoreVertical, Edit3, ListChecks, LayoutGrid, List, XCircle, Clock } from 'lucide-react';
 
 // Interface cho một bản ghi thanh toán
 interface PaymentRecord {
@@ -10,19 +10,28 @@ interface PaymentRecord {
   email: string;
   paymentDate: string;
   amount: number;
+  status: 'Đã thanh toán' | 'Chưa thanh toán';
 }
 
-// ---- Dữ liệu mẫu ----
+// Thông tin đại lý hiện tại (giả lập đăng nhập)
+const currentAgency = {
+  name: 'Đại lý Hà Nội',
+  address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội',
+  phone: '0901234567',
+  email: 'hanoi@example.com'
+};
+
+// ---- Dữ liệu mẫu - chỉ các phiếu thu của đại lý hiện tại ----
 const initialPaymentRecords: PaymentRecord[] = [
-    { id: 'PT001', agency: 'Đại lý Miền Bắc', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'mienbac@example.com', paymentDate: '2024-07-21', amount: 5000000, },
-    { id: 'PT002', agency: 'Đại lý Miền Trung', address: '123 Lê Lợi, Hải Châu, Đà Nẵng', phone: '0902345678', email: 'mientrung@example.com', paymentDate: '2024-07-20', amount: 3500000, },
-    { id: 'PT003', agency: 'Đại lý Miền Nam', address: '25 Nguyễn Huệ, Quận 1, TP.HCM', phone: '0903456789', email: 'miennam@example.com', paymentDate: '2024-07-19', amount: 8750000, },
-    { id: 'PT004', agency: 'Đại lý Tây Nguyên', address: '50 Hùng Vương, Buôn Ma Thuột, Đắk Lắk', phone: '0904567890', email: 'taynguyen@example.com', paymentDate: '2024-07-18', amount: 4200000, },
-    { id: 'PT005', agency: 'Đại lý Đồng Bằng Sông Cửu Long', address: '10 Nguyễn Trãi, Ninh Kiều, Cần Thơ', phone: '0905678901', email: 'dbscl@example.com', paymentDate: '2024-07-17', amount: 6800000, },
-    { id: 'PT006', agency: 'Đại lý Duyên Hải Nam Trung Bộ', address: '30 Trần Phú, Nha Trang, Khánh Hòa', phone: '0906789012', email: 'dhntb@example.com', paymentDate: '2024-07-16', amount: 3100000, },
+    { id: 'PT001', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-21', amount: 5000000, status: 'Đã thanh toán' },
+    { id: 'PT007', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-20', amount: 3200000, status: 'Chưa thanh toán' },
+    { id: 'PT015', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-19', amount: 4800000, status: 'Đã thanh toán' },
+    { id: 'PT023', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-18', amount: 2100000, status: 'Chưa thanh toán' },
+    { id: 'PT031', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-17', amount: 6500000, status: 'Đã thanh toán' },
+    { id: 'PT045', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-16', amount: 3800000, status: 'Chưa thanh toán' },
 ];
 
-// Component cho card phiếu thu (mobile view) - Giữ nguyên code gốc của bạn
+// Component cho card phiếu thu (mobile view)
 const PaymentCard: React.FC<{
   record: PaymentRecord;
   onDelete: (record: PaymentRecord) => void;
@@ -56,30 +65,11 @@ const PaymentCard: React.FC<{
       </div>
       
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-gray-400" />
-          <span className="font-medium text-gray-900">{record.agency}</span>
-        </div>
-        
-        <div className="flex items-start gap-2">
-          <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-          <span className="text-sm text-gray-600">{record.address}</span>
-        </div>
-        
         <div className="flex items-center gap-4 text-sm text-gray-600">
-          <div className="flex items-center gap-1">
-            <Phone className="w-3 h-3" />
-            <span>{record.phone}</span>
-          </div>
           <div className="flex items-center gap-1">
             <CalendarDays className="w-3 h-3" />
             <span>{record.paymentDate}</span>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-1">
-          <Mail className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-600">{record.email}</span>
         </div>
         
         <div className="pt-2 border-t border-gray-100">
@@ -95,37 +85,48 @@ const PaymentCard: React.FC<{
   );
 };
 
-// Component cho modal chi tiết phiếu thu - Giữ nguyên code gốc của bạn
+// Component cho modal chi tiết phiếu thu
 const DetailModal: React.FC<{
   record: PaymentRecord | null;
   onClose: () => void;
-}> = ({ record, onClose }) => {
+  onPay: (id: string) => Promise<void>;
+  loadingPay: boolean;
+}> = ({ record, onClose, onPay, loadingPay }) => {
   if (!record) return null;
+
+  const isPaid = record.status === 'Đã thanh toán';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-2xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                <Receipt className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold">Chi tiết phiếu thu</h2>
-                <p className="text-blue-100">Mã phiếu: {record.id}</p>
-              </div>
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-2xl flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg border-4 border-white">
+              <Receipt className="w-8 h-8 text-white drop-shadow" />
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg flex items-center justify-center transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-extrabold">Chi tiết phiếu thu</h2>
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 border border-green-400 text-green-700 font-semibold text-sm shadow">
+                  <CheckCircle className="w-5 h-5" />
+                  Hoàn thành
+                </span>
+              </div>
+              <p className="text-blue-100 font-semibold flex items-center gap-2 mt-1">
+                <ListChecks className="w-4 h-4 text-white" />
+                Mã phiếu: <span className="underline">{record.id}</span>
+              </p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-red-500 transition-colors shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+            title="Đóng"
+          >
+            <XCircle className="w-7 h-7 text-gray-400 hover:text-white transition-colors" />
+          </button>
         </div>
+        
         <div className="p-6 space-y-6">
           <div className="bg-gray-50 rounded-xl p-4">
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -133,34 +134,115 @@ const DetailModal: React.FC<{
               Thông tin đại lý
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><label className="text-sm text-gray-500">Tên đại lý</label><p className="font-medium text-gray-900">{record.agency}</p></div>
-              <div><label className="text-sm text-gray-500">Mã phiếu thu</label><p className="font-medium text-blue-600">{record.id}</p></div>
+              <div>
+                <label className="text-sm text-gray-500">Tên đại lý</label>
+                <p className="font-medium text-gray-900">{currentAgency.name}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">Mã phiếu thu</label>
+                <p className="font-medium text-blue-600">{record.id}</p>
+              </div>
             </div>
-            <div className="mt-3"><label className="text-sm text-gray-500">Địa chỉ</label><p className="font-medium text-gray-900">{record.address}</p></div>
+            <div className="mt-3">
+              <label className="text-sm text-gray-500">Địa chỉ</label>
+              <p className="font-medium text-gray-900">{currentAgency.address}</p>
+            </div>
           </div>
+          
           <div className="bg-gray-50 rounded-xl p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Phone className="w-5 h-5 text-green-600" />Thông tin liên hệ</h3>
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <Phone className="w-5 h-5 text-green-600" />
+              Thông tin liên hệ
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400" /><div><label className="text-sm text-gray-500">Số điện thoại</label><p className="font-medium text-gray-900">{record.phone}</p></div></div>
-              <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-gray-400" /><div><label className="text-sm text-gray-500">Email</label><p className="font-medium text-gray-900">{record.email}</p></div></div>
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-gray-400" />
+                <div>
+                  <label className="text-sm text-gray-500">Số điện thoại</label>
+                  <p className="font-medium text-gray-900">{currentAgency.phone}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-gray-400" />
+                <div>
+                  <label className="text-sm text-gray-500">Email</label>
+                  <p className="font-medium text-gray-900">{currentAgency.email}</p>
+                </div>
+              </div>
             </div>
           </div>
+          
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
-             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5 text-green-600" />Thông tin thanh toán</h3>
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              Thông tin thanh toán
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-2"><CalendarDays className="w-4 h-4 text-gray-400" /><div><label className="text-sm text-gray-500">Ngày thu tiền</label><p className="font-medium text-gray-900">{record.paymentDate}</p></div></div>
-              <div><label className="text-sm text-gray-500">Số tiền thu</label><p className="text-2xl font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VNĐ</p></div>
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-4 h-4 text-gray-400" />
+                <div>
+                  <label className="text-sm text-gray-500">Ngày thu tiền</label>
+                  <p className="font-medium text-gray-900">{record.paymentDate}</p>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">Số tiền thu</label>
+                <p className="text-2xl font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VNĐ</p>
+              </div>
             </div>
           </div>
+          
           <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><CheckCircle className="w-5 h-5 text-blue-600" />Trạng thái</h3>
-            <div className="flex items-center gap-2"><span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Hoàn thành</span><span className="text-sm text-gray-500">Phiếu thu đã được xử lý thành công</span></div>
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              {isPaid ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <Clock className="w-5 h-5 text-yellow-500" />
+              )}
+              Trạng thái
+            </h3>
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium
+                ${isPaid
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-yellow-100 text-yellow-800'}
+              `}>
+                {isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
+              </span>
+              <span className="text-sm text-gray-500">
+                {isPaid
+                  ? 'Phiếu thu đã được xử lý thành công'
+                  : 'Phiếu thu chưa được thanh toán'}
+              </span>
+            </div>
           </div>
         </div>
+        
         <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
           <div className="flex justify-end gap-3">
-            <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">Đóng</button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"><Edit3 className="w-4 h-4" />Chỉnh sửa</button>
+            <button 
+              onClick={onClose} 
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+            >
+              Đóng
+            </button>
+            {!isPaid && (
+              <button
+                onClick={() => onPay(record.id)}
+                disabled={loadingPay}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-60"
+              >
+                {loadingPay ? (
+                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                  </svg>
+                ) : (
+                  <DollarSign className="w-4 h-4" />
+                )}
+                Thanh toán
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -168,7 +250,7 @@ const DetailModal: React.FC<{
   );
 };
 
-// Component cho modal xác nhận xóa - Giữ nguyên code gốc của bạn
+// Component cho modal xác nhận xóa
 const DeleteModal: React.FC<{
   record: PaymentRecord | null;
   onConfirm: () => void;
@@ -184,10 +266,23 @@ const DeleteModal: React.FC<{
             <Trash2 className="h-6 w-6 text-red-600" />
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-2">Xác nhận xóa phiếu thu</h3>
-          <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn xóa phiếu thu <strong>{record.id}</strong>?<br /><span className="text-sm text-red-600">Hành động này không thể hoàn tác.</span></p>
+          <p className="text-gray-600 mb-6">
+            Bạn có chắc chắn muốn xóa phiếu thu <strong>{record.id}</strong>?<br />
+            <span className="text-sm text-red-600">Hành động này không thể hoàn tác.</span>
+          </p>
           <div className="flex gap-3">
-            <button onClick={onCancel} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold">Hủy bỏ</button>
-            <button onClick={onConfirm} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">Xóa phiếu thu</button>
+            <button 
+              onClick={onCancel} 
+              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
+            >
+              Hủy bỏ
+            </button>
+            <button 
+              onClick={onConfirm} 
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+            >
+              Xóa phiếu thu
+            </button>
           </div>
         </div>
       </div>
@@ -207,14 +302,15 @@ const PaymentPage: React.FC = () => {
     const itemsPerPage = 8;
     const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>(initialPaymentRecords);
+    const [loadingPay, setLoadingPay] = useState(false);
 
-    // Logic xử lý - Giữ nguyên code gốc của bạn
+    // Lọc các phiếu thu chỉ thuộc về đại lý hiện tại
     const filteredRecords = paymentRecords.filter(record =>
-        record.agency.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.phone.includes(searchTerm) ||
-        record.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.id.toLowerCase().includes(searchTerm.toLowerCase())
+        record.agency === currentAgency.name && (
+            record.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            record.paymentDate.includes(searchTerm) ||
+            record.amount.toString().includes(searchTerm)
+        )
     );
   
     const indexOfLastRecord = currentPage * itemsPerPage;
@@ -262,9 +358,19 @@ const PaymentPage: React.FC = () => {
       setRecordToDelete(null);
     };
 
-    const totalPayments = paymentRecords.length;
-    const totalAmount = paymentRecords.reduce((sum, r) => sum + r.amount, 0);
-    const uniqueAgencies = [...new Set(paymentRecords.map(r => r.agency))].length;
+    const handlePay = async (id: string) => {
+      setLoadingPay(true);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setPaymentRecords(records =>
+        records.map(r => r.id === id ? { ...r, status: 'Đã thanh toán' } : r)
+      );
+      setShowDetailModal(false);
+      setToast({ type: 'success', message: `Đã thanh toán phiếu thu ${id} thành công!` });
+      setLoadingPay(false);
+    };
+
+    const totalPayments = filteredRecords.length;
+    const totalAmount = filteredRecords.reduce((sum, r) => sum + r.amount, 0);
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -276,52 +382,50 @@ const PaymentPage: React.FC = () => {
             )}
 
             <div className="max-w-7xl mx-auto">
-                {/* ---- HEADER ĐÃ ĐƯỢC CẬP NHẬT ---- */}
+                {/* Header với thông tin đại lý */}
                 <header className="mb-8">
                     <div className="flex items-center gap-4 mb-2">
                         <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
                             <Receipt className="h-7 w-7 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-extrabold text-gray-800">Quản Lý Thanh Toán</h1>
+                            <h1 className="text-3xl font-extrabold text-gray-800">Phiếu Thu Của Tôi</h1>
+                            <p className="text-blue-600 font-semibold">{currentAgency.name}</p>
                         </div>
                     </div>
-                    <p className="text-gray-600 mt-1 ml-1">Theo dõi và quản lý các phiếu thu từ đại lý.</p>
+                    <p className="text-gray-600 mt-1 ml-1">Quản lý các phiếu thu của đại lý bạn.</p>
                 </header>
 
-                {/* ---- THẺ THỐNG KÊ ĐÃ ĐƯỢC CẬP NHẬT ---- */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                {/* Thẻ thống kê */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-blue-500 flex items-center gap-5">
-                        <div className="bg-blue-100 p-3 rounded-full"><ListChecks className="h-7 w-7 text-blue-600" /></div>
+                        <div className="bg-blue-100 p-3 rounded-full">
+                            <ListChecks className="h-7 w-7 text-blue-600" />
+                        </div>
                         <div>
                             <h3 className="text-gray-500 font-semibold">Tổng phiếu thu</h3>
                             <p className="text-3xl font-bold text-gray-800">{totalPayments}</p>
                         </div>
                     </div>
                     <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-green-500 flex items-center gap-5">
-                        <div className="bg-green-100 p-3 rounded-full"><DollarSign className="h-7 w-7 text-green-600" /></div>
+                        <div className="bg-green-100 p-3 rounded-full">
+                            <DollarSign className="h-7 w-7 text-green-600" />
+                        </div>
                         <div>
                             <h3 className="text-gray-500 font-semibold">Tổng số tiền</h3>
                             <p className="text-2xl lg:text-3xl font-bold text-gray-800">{(totalAmount / 1000000).toFixed(2)}M</p>
                         </div>
                     </div>
-                    <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-purple-500 flex items-center gap-5">
-                        <div className="bg-purple-100 p-3 rounded-full"><Users className="h-7 w-7 text-purple-600" /></div>
-                        <div>
-                            <h3 className="text-gray-500 font-semibold">Số đại lý</h3>
-                            <p className="text-3xl font-bold text-gray-800">{uniqueAgencies}</p>
-                        </div>
-                    </div>
                 </div>
 
-                {/* ---- PHẦN CÒN LẠI GIỮ NGUYÊN CODE GỐC CỦA BẠN ---- */}
+                {/* Thanh tìm kiếm và chuyển đổi view */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
                     <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                         <div className="relative flex-1 max-w-md">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                             <input
                                 type="text"
-                                placeholder="Tìm kiếm phiếu thu, đại lý..."
+                                placeholder="Tìm kiếm theo mã phiếu, ngày thu..."
                                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -340,30 +444,102 @@ const PaymentPage: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Bảng/Card hiển thị phiếu thu */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     {viewMode === 'table' ? (
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-gray-50 border-b border-gray-200">
                                     <tr>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1"><ListChecks className="h-5 w-5" />Mã phiếu</span></th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1"><Users className="h-5 w-5" />Thông tin đại lý</span></th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm hidden lg:table-cell"><span className="flex items-center gap-1"><Phone className="h-5 w-5" />Liên hệ</span></th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1"><CalendarDays className="h-5 w-5" />Ngày thu</span></th>
-                                        <th className="text-right py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1 justify-end"><DollarSign className="h-5 w-5" />Số tiền</span></th>
-                                        <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1 justify-center"><MoreVertical className="h-5 w-5" />Thao tác</span></th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">
+                                            <span className="flex items-center gap-1">
+                                                <ListChecks className="h-5 w-5" />
+                                                Mã phiếu
+                                            </span>
+                                        </th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">
+                                            <span className="flex items-center gap-1">
+                                                <CalendarDays className="h-5 w-5" />
+                                                Ngày thu
+                                            </span>
+                                        </th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">
+                                            <span className="flex items-center gap-1">
+                                                <Users className="h-5 w-5" />
+                                                Đại lý
+                                            </span>
+                                        </th>
+                                        <th className="text-right py-3 px-4 font-semibold text-gray-700 text-sm">
+                                            <span className="flex items-center gap-1 justify-end">
+                                                <DollarSign className="h-5 w-5" />
+                                                Số tiền
+                                            </span>
+                                        </th>
+                                        <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">
+                                            <span className="flex items-center gap-1 justify-center">
+                                                <Users className="h-5 w-5" />
+                                                Trạng thái
+                                            </span>
+                                        </th>
+                                        <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">
+                                            <span className="flex items-center gap-1 justify-center">
+                                                <MoreVertical className="h-5 w-5" />
+                                                Thao tác
+                                            </span>
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {currentRecords.map((record) => (
-                                    <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="py-3 px-4"><div className="flex items-center gap-2"><div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"><Receipt className="w-4 h-4 text-blue-600" /></div><span className="font-semibold text-blue-700">{record.id}</span></div></td>
-                                        <td className="py-3 px-4"><div><div className="font-medium text-gray-900">{record.agency}</div><div className="text-sm text-gray-500 truncate max-w-xs">{record.address}</div></div></td>
-                                        <td className="py-3 px-4 hidden lg:table-cell"><div className="text-sm space-y-1"><div className="flex items-center gap-1 text-gray-600"><Phone className="w-3 h-3" /><span>{record.phone}</span></div><div className="flex items-center gap-1 text-gray-600"><Mail className="w-3 h-3" /><span className="truncate max-w-xs">{record.email}</span></div></div></td>
-                                        <td className="py-3 px-4 text-sm text-gray-600">{record.paymentDate}</td>
-                                        <td className="py-3 px-4 text-right"><span className="font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VNĐ</span></td>
-                                        <td className="py-3 px-4"><div className="flex items-center justify-center gap-1"><button onClick={() => handleViewDetail(record)} className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors group" title="Xem chi tiết"><Eye className="w-4 h-4 text-gray-400 group-hover:text-blue-600" /></button><button onClick={() => handleDeleteClick(record)} className="p-1.5 hover:bg-red-50 rounded-lg transition-colors group" title="Xóa phiếu thu"><Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-600" /></button></div></td>
-                                    </tr>
+                                        <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="py-3 px-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                        <Receipt className="w-4 h-4 text-blue-600" />
+                                                    </div>
+                                                    <span className="font-semibold text-blue-700">{record.id}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm text-gray-600">{record.paymentDate}</td>
+                                            <td className="py-3 px-4 text-gray-700">
+                                                <div className="font-semibold">{record.agency}</div>
+                                                <div className="text-xs text-gray-500 flex items-center gap-1"><Phone size={14}/> {record.phone}</div>
+                                            </td>
+                                            <td className="py-3 px-4 text-right">
+                                                <span className="font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VNĐ</span>
+                                            </td>
+                                            <td className="py-3 px-4 text-center">
+                                                {record.status === 'Đã thanh toán' ? (
+                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-lg shadow-sm">
+                                                        <CheckCircle className="h-4 w-4" /> Đã thanh toán
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-lg shadow-sm">
+                                                        <Clock className="h-4 w-4" /> Chưa thanh toán
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-4 text-center">
+                                                {record.status === 'Chưa thanh toán' ? (
+                                                    <button
+                                                        onClick={async () => {
+                                                            setLoadingPay(true);
+                                                            await handlePay(record.id);
+                                                            setLoadingPay(false);
+                                                        }}
+                                                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+                                                        disabled={loadingPay}
+                                                    >
+                                                        {loadingPay ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> : <DollarSign className="h-5 w-5" />}
+                                                        Thanh toán
+                                                    </button>
+                                                ) : (
+                                                    <span className="flex items-center justify-center gap-1 px-4 py-2 text-gray-500 font-semibold">
+                                                        <CheckCircle className="h-5 w-5" /> Đã xử lý
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
                                     ))}
                                 </tbody>
                             </table>
@@ -371,32 +547,87 @@ const PaymentPage: React.FC = () => {
                     ) : (
                         <div className="p-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {currentRecords.map((record) => (<PaymentCard key={record.id} record={record} onDelete={handleDeleteClick} onViewDetail={handleViewDetail} />))}
+                                {currentRecords.map((record) => (
+                                    <PaymentCard 
+                                        key={record.id} 
+                                        record={record} 
+                                        onDelete={handleDeleteClick} 
+                                        onViewDetail={handleViewDetail} 
+                                    />
+                                ))}
                             </div>
                         </div>
                     )}
+                    
                     {filteredRecords.length === 0 && (
-                        <div className="text-center py-12"><div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><Search className="w-6 h-6 text-gray-400" /></div><p className="text-gray-500 text-lg">Không tìm thấy phiếu thu nào</p><p className="text-gray-400 text-sm">Thử thay đổi từ khóa tìm kiếm</p></div>
+                        <div className="text-center py-12">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Search className="w-6 h-6 text-gray-400" />
+                            </div>
+                            <p className="text-gray-500 text-lg">Không tìm thấy phiếu thu nào</p>
+                            <p className="text-gray-400 text-sm">Thử thay đổi từ khóa tìm kiếm</p>
+                        </div>
                     )}
                 </div>
 
+                {/* Phân trang */}
                 {filteredRecords.length > itemsPerPage && (
                     <div className="flex justify-center mt-6">
                         <nav className="flex items-center gap-1">
-                            <button onClick={() => handlePageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Trước</button>
+                            <button 
+                                onClick={() => handlePageChange(Math.max(1, currentPage - 1))} 
+                                disabled={currentPage === 1} 
+                                className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Trước
+                            </button>
                             {[...Array(Math.min(5, totalPages))].map((_, index) => {
                                 const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + index;
                                 if (pageNum > totalPages) return null;
-                                return (<button key={pageNum} onClick={() => handlePageChange(pageNum)} className={`px-3 py-2 text-sm border rounded-lg transition-colors ${ currentPage === pageNum ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 hover:bg-gray-50' }`}>{pageNum}</button>);
+                                return (
+                                    <button 
+                                        key={pageNum} 
+                                        onClick={() => handlePageChange(pageNum)} 
+                                        className={`px-3 py-2 text-sm border rounded-lg transition-colors ${ 
+                                            currentPage === pageNum 
+                                                ? 'bg-blue-600 text-white' 
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
                             })}
-                            <button onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Sau</button>
+                            <button 
+                                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))} 
+                                disabled={currentPage === totalPages} 
+                                className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Tiếp
+                            </button>
                         </nav>
                     </div>
                 )}
             </div>
 
-            <DetailModal record={recordToView} onClose={handleCloseDetail} />
-            <DeleteModal record={recordToDelete} onConfirm={handleDeleteConfirm} onCancel={handleDeleteCancel} />
+            {/* Modal xác nhận xóa */}
+            {showDeleteModal && recordToDelete && (
+                <DeleteModal 
+                    record={recordToDelete} 
+                    onConfirm={handleDeleteConfirm} 
+                    onCancel={handleDeleteCancel} 
+                />
+            )}
+
+            {/* Modal chi tiết phiếu thu */}
+            {showDetailModal && recordToView && (
+                <DetailModal
+                  record={recordToView}
+                  onClose={handleCloseDetail}
+                  onPay={handlePay}
+                  loadingPay={loadingPay}
+                />
+            )}
         </div>
     );
 };

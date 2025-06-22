@@ -139,45 +139,43 @@ const AgencyReportsPage: React.FC = () => {
         </div>
       </div>
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-blue-100">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-blue-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Mã báo cáo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Tiêu đề</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Loại</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Kỳ báo cáo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Dữ liệu chính</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Trạng thái</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Người tạo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Ngày tạo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Thao tác</th>
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-blue-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Mã báo cáo</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Tiêu đề</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Loại</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Kỳ báo cáo</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Dữ liệu chính</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Trạng thái</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Người tạo</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Ngày tạo</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {reports.map((report) => (
+              <tr key={report.id} className="hover:bg-blue-50 transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-900">{report.id}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.title}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{getTypeBadge(report.type)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.period}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {report.type === 'Doanh thu' && <span>Doanh số: {formatCurrency(report.amount || 0)}</span>}
+                  {report.type === 'Công nợ' && <span>Số tiền công nợ: {formatCurrency(report.amount || 0)}</span>}
+                  {report.type === 'Tồn kho' && <span>Số lượng tồn: {report.amount || 0}</span>}
+                  {report.type === 'Hoạt động' && <span>Mô tả: {report.description || '-'}</span>}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(report.status)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex items-center gap-2"><User className="h-4 w-4 text-blue-400"/>{report.creator}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.createdDate}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <Link to={`/reports/detail/${report.id}`} className="text-blue-600 hover:text-blue-900 flex items-center gap-1"><Eye className="h-4 w-4"/>Xem chi tiết</Link>
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {reports.map((report) => (
-                <tr key={report.id} className="hover:bg-blue-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-900">{report.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.title}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{getTypeBadge(report.type)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.period}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {report.type === 'Doanh thu' && <span>Doanh số: {formatCurrency(report.amount || 0)}</span>}
-                    {report.type === 'Công nợ' && <span>Số tiền công nợ: {formatCurrency(report.amount || 0)}</span>}
-                    {report.type === 'Tồn kho' && <span>Số lượng tồn: {report.amount || 0}</span>}
-                    {report.type === 'Hoạt động' && <span>Mô tả: {report.description || '-'}</span>}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(report.status)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex items-center gap-2"><User className="h-4 w-4 text-blue-400"/>{report.creator}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.createdDate}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <Link to={`/reports/detail/${report.id}`} className="text-blue-600 hover:text-blue-900 flex items-center gap-1"><Eye className="h-4 w-4"/>Xem chi tiết</Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
       {/* Thêm 2 card thống kê dưới danh sách báo cáo */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
@@ -214,59 +212,42 @@ const AgencyReportsPage: React.FC = () => {
         {/* Biểu đồ doanh số theo thời gian */}
         <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-100 flex flex-col items-center justify-center">
           <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2"><BarChart className="h-5 w-5 text-blue-600"/>Biểu đồ doanh số theo thời gian</h3>
-          <svg viewBox="0 0 420 240" width="100%" height="240" className="mx-auto">
+          <svg viewBox="0 0 420 290" width="100%" height="290" className="mx-auto">
             {/* Legend */}
-            <rect x="80" y="15" width="18" height="12" fill="#60a5fa" />
-            <text x="105" y="25" fontSize="15" fill="#2563eb" fontWeight="bold">Doanh số (Triệu VND)</text>
+            <rect x="60" y="20" width="18" height="12" fill="#60a5fa" />
+            <text x="85" y="30" fontSize="14" fill="#2563eb" fontWeight="bold">Doanh số (Triệu VND)</text>
             {/* Title */}
-            <text x="210" y="50" textAnchor="middle" fontSize="18" fill="#334155" fontWeight="bold">Biểu đồ doanh số theo thời gian</text>
+            <text x="210" y="55" textAnchor="middle" fontSize="18" fill="#334155" fontWeight="bold">Biểu đồ doanh số theo thời gian</text>
             {/* Grid lines */}
             {[0, 1, 2, 3, 4].map(i => (
-              <line key={i} x1="50" x2="380" y1={70 + i*40} y2={70 + i*40} stroke="#e5e7eb" strokeWidth="1" />
+              <line key={i} x1="50" x2="380" y1={80 + i*36} y2={80 + i*36} stroke="#e5e7eb" strokeWidth="1" />
             ))}
             {/* Y axis */}
-            <line x1="50" y1="70" x2="50" y2="230" stroke="#94a3b8" strokeWidth="2" />
+            <line x1="50" y1="80" x2="50" y2="224" stroke="#94a3b8" strokeWidth="2" />
             {/* X axis */}
-            <line x1="50" y1="230" x2="380" y2="230" stroke="#94a3b8" strokeWidth="2" />
+            <line x1="50" y1="224" x2="380" y2="224" stroke="#94a3b8" strokeWidth="2" />
             {/* Bars: Doanh số */}
-            {[
-              { x: 80, height: 100, value: 100, label: '01/2024' },
-              { x: 150, height: 70, value: 150, label: '02/2024' },
-              { x: 220, height: 40, value: 180, label: '04/2024' },
-              { x: 290, height: 20, value: 200, label: '05/2024' }
-            ].map((bar) => (
-              <rect key={bar.label} x={bar.x} y={bar.height+70} width="40" height={160-bar.height} rx="6" fill="#60a5fa" />
-            ))}
-            {/* X labels */}
-            {['01/2024', '02/2024', '04/2024', '05/2024'].map((label, idx) => (
-              <text
-                key={label}
-                x={100 + idx * 80}
-                y="235"
-                textAnchor="middle"
-                fontSize="17"
-                fontWeight="bold"
-                fill="#1e293b"
-                stroke="#fff"
-                strokeWidth="0.8"
-                paintOrder="stroke"
-                style={{ letterSpacing: 1 }}
-              >
-                {label}
-              </text>
-            ))}
-            {/* Y labels */}
-            {[0, 50, 100, 150, 200].map((v, i) => (
-              <text key={v} x="40" y={230-40*i+5} textAnchor="end" fontSize="13" fill="#64748b">{v}</text>
-            ))}
-            {/* Value labels on top of bars */}
             {[
               { x: 80, height: 100, value: 100 },
               { x: 150, height: 70, value: 150 },
               { x: 220, height: 40, value: 180 },
               { x: 290, height: 20, value: 200 }
-            ].map((bar) => (
-              <text key={bar.x} x={bar.x+20} y={bar.height+65} textAnchor="middle" fontSize="13" fill="#2563eb" fontWeight="bold">{bar.value}</text>
+            ].map((bar, idx) => (
+              <g key={bar.x}>
+                <rect x={bar.x} y={bar.height+80} width="40" height={144-bar.height} rx="6" fill="#60a5fa" />
+                {/* Value on top */}
+                <text x={bar.x+20} y={bar.height+70} textAnchor="middle" fontSize="15" fill="#2563eb" fontWeight="bold">{bar.value}</text>
+                {/* Month label: 5/2024, 6/2024, ... */}
+                <text x={bar.x+20} y={244} textAnchor="middle" fontSize="15" fill="#64748b">{"5/2024,6/2024,7/2024,8/2024".split(",")[idx]}</text>
+              </g>
+            ))}
+            {/* Đơn vị trục hoành căn giữa */}
+            <text x="210" y="285" textAnchor="middle" fontSize="13" fill="#64748b" fontWeight="bold">Tháng</text>
+            {/* Đơn vị trục tung sát trục, trên cùng */}
+            <text x="45" y="65" textAnchor="end" fontSize="13" fill="#64748b" fontWeight="bold">Triệu VND</text>
+            {/* Y labels */}
+            {[0, 50, 100, 150, 200].map((v, i) => (
+              <text key={v} x="40" y={224-36*i+5} textAnchor="end" fontSize="13" fill="#64748b">{v}</text>
             ))}
           </svg>
         </div>
@@ -303,59 +284,42 @@ const AgencyReportsPage: React.FC = () => {
         {/* Biểu đồ công nợ theo thời gian */}
         <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-100 flex flex-col items-center justify-center">
           <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2"><BarChart className="h-5 w-5 text-red-600"/>Biểu đồ công nợ theo thời gian</h3>
-          <svg viewBox="0 0 420 240" width="100%" height="240" className="mx-auto">
+          <svg viewBox="0 0 420 290" width="100%" height="290" className="mx-auto">
             {/* Legend */}
-            <rect x="80" y="15" width="18" height="12" fill="#fb7185" />
-            <text x="105" y="25" fontSize="15" fill="#be123c" fontWeight="bold">Công nợ (Triệu VND)</text>
+            <rect x="60" y="20" width="18" height="12" fill="#fb7185" />
+            <text x="85" y="30" fontSize="14" fill="#be123c" fontWeight="bold">Công nợ (Triệu VND)</text>
             {/* Title */}
-            <text x="210" y="50" textAnchor="middle" fontSize="18" fill="#334155" fontWeight="bold">Biểu đồ công nợ theo thời gian</text>
+            <text x="210" y="55" textAnchor="middle" fontSize="18" fill="#334155" fontWeight="bold">Biểu đồ công nợ theo thời gian</text>
             {/* Grid lines */}
             {[0, 1, 2, 3, 4].map(i => (
-              <line key={i} x1="50" x2="380" y1={70 + i*40} y2={70 + i*40} stroke="#e5e7eb" strokeWidth="1" />
+              <line key={i} x1="50" x2="380" y1={80 + i*36} y2={80 + i*36} stroke="#e5e7eb" strokeWidth="1" />
             ))}
             {/* Y axis */}
-            <line x1="50" y1="70" x2="50" y2="230" stroke="#94a3b8" strokeWidth="2" />
+            <line x1="50" y1="80" x2="50" y2="224" stroke="#94a3b8" strokeWidth="2" />
             {/* X axis */}
-            <line x1="50" y1="230" x2="380" y2="230" stroke="#94a3b8" strokeWidth="2" />
+            <line x1="50" y1="224" x2="380" y2="224" stroke="#94a3b8" strokeWidth="2" />
             {/* Bars: Công nợ */}
-            {[
-              { x: 80, height: 120, value: 80, label: '01/2024' },
-              { x: 150, height: 90, value: 120, label: '02/2024' },
-              { x: 220, height: 60, value: 150, label: '04/2024' },
-              { x: 290, height: 40, value: 180, label: '05/2024' }
-            ].map((bar) => (
-              <rect key={bar.label} x={bar.x} y={bar.height+70} width="40" height={160-bar.height} rx="6" fill="#fb7185" />
-            ))}
-            {/* X labels */}
-            {['01/2024', '02/2024', '04/2024', '05/2024'].map((label, idx) => (
-              <text
-                key={label}
-                x={100 + idx * 80}
-                y="235"
-                textAnchor="middle"
-                fontSize="17"
-                fontWeight="bold"
-                fill="#1e293b"
-                stroke="#fff"
-                strokeWidth="0.8"
-                paintOrder="stroke"
-                style={{ letterSpacing: 1 }}
-              >
-                {label}
-              </text>
-            ))}
-            {/* Y labels */}
-            {[0, 50, 100, 150, 200].map((v, i) => (
-              <text key={v} x="40" y={230-40*i+5} textAnchor="end" fontSize="13" fill="#64748b">{v}</text>
-            ))}
-            {/* Value labels on top of bars */}
             {[
               { x: 80, height: 120, value: 80 },
               { x: 150, height: 90, value: 120 },
               { x: 220, height: 60, value: 150 },
               { x: 290, height: 40, value: 180 }
-            ].map((bar) => (
-              <text key={bar.x} x={bar.x+20} y={bar.height+65} textAnchor="middle" fontSize="13" fill="#be123c" fontWeight="bold">{bar.value}</text>
+            ].map((bar, idx) => (
+              <g key={bar.x}>
+                <rect x={bar.x} y={bar.height+80} width="40" height={144-bar.height} rx="6" fill="#fb7185" />
+                {/* Value on top */}
+                <text x={bar.x+20} y={bar.height+70} textAnchor="middle" fontSize="15" fill="#be123c" fontWeight="bold">{bar.value}</text>
+                {/* Month label: 5/2024, 6/2024, ... */}
+                <text x={bar.x+20} y={244} textAnchor="middle" fontSize="15" fill="#64748b">{"5/2024,6/2024,7/2024,8/2024".split(",")[idx]}</text>
+              </g>
+            ))}
+            {/* Đơn vị trục hoành căn giữa */}
+            <text x="210" y="285" textAnchor="middle" fontSize="13" fill="#64748b" fontWeight="bold">Tháng</text>
+            {/* Đơn vị trục tung sát trục, trên cùng */}
+            <text x="45" y="65" textAnchor="end" fontSize="13" fill="#64748b" fontWeight="bold">Triệu VND</text>
+            {/* Y labels */}
+            {[0, 50, 100, 150, 200].map((v, i) => (
+              <text key={v} x="40" y={224-36*i+5} textAnchor="end" fontSize="13" fill="#64748b">{v}</text>
             ))}
           </svg>
         </div>
