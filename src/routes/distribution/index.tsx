@@ -1,0 +1,631 @@
+import React, { useState, useEffect } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+import { Package, MapPin, Clock, CheckCircle, AlertCircle, Truck, Plus, X, Send, RefreshCw, Eye, Calendar, User } from 'lucide-react';
+
+interface ProductLine {
+  productId: string;
+  quantity: number;
+  unit: string;
+}
+
+interface DistributionFormData {
+  products: ProductLine[];
+  deliveryAddress: string;
+}
+
+interface DistributionRequest extends DistributionFormData {
+  id: string;
+  submittedAt: string;
+  lastUpdatedAt: string;
+  status: 'processing' | 'postponed' | 'confirmed';
+  statusReason?: string;
+  forcePostponed: boolean;
+}
+
+const unitOptions = ['Thùng', 'Hộp', 'Chai', 'Gói', 'Kg', 'Lít', 'Cái'];
+
+const schema = yup.object({
+  products: yup.array().of(
+    yup.object({
+      productId: yup.string().required('Vui lòng chọn sản phẩm'),
+      quantity: yup.number().required('Vui lòng nhập số lượng').min(1, 'Số lượng phải lớn hơn 0'),
+      unit: yup.string().required('Vui lòng chọn đơn vị'),
+    })
+  ).min(1, 'Vui lòng chọn ít nhất 1 sản phẩm'),
+  deliveryAddress: yup.string().required('Vui lòng nhập địa chỉ giao hàng').min(10, 'Địa chỉ phải có ít nhất 10 ký tự'),
+});
+
+const productsList = [
+  { id: 'sp001', name: 'Sản phẩm Premium A', category: 'Cao cấp' },
+  { id: 'sp002', name: 'Sản phẩm Standard B', category: 'Tiêu chuẩn' },
+  { id: 'sp003', name: 'Sản phẩm Economy C', category: 'Phổ thông' },
+  { id: 'sp004', name: 'Sản phẩm Special D', category: 'Đặc biệt' },
+];
+
+const DistributionRequestPage: React.FC = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requests, setRequests] = useState<DistributionRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<DistributionRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [forcePostponed, setForcePostponed] = useState(false);
+  const [notification, setNotification] = useState<{type: 'success' | 'error' | 'info', message: string} | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors },
+  } = useForm<DistributionFormData>({
+    resolver: yupResolver(schema) as any,
+    defaultValues: {
+      products: [{ productId: '', quantity: 1, unit: '' }],
+      deliveryAddress: '',
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({ control, name: 'products' });
+
+  // Auto-processing simulation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRequests(prevRequests => {
+        const newRequests = [...prevRequests];
+        const requestToProcessIndex = newRequests.findIndex(r => 
+          r.status === 'processing' || (r.status === 'postponed' && Math.random() < 0.2)
+        );
+
+        if (requestToProcessIndex !== -1) {
+          const originalRequest = newRequests[requestToProcessIndex];
+          if (!originalRequest) return prevRequests;
+
+          let newStatus: DistributionRequest['status'] = originalRequest.status;
+          let newStatusReason = originalRequest.statusReason;
+          
+          if (originalRequest.status === 'processing') {
+            const isPostponed = originalRequest.forcePostponed || Math.random() < 0.3;
+            if (isPostponed) {
+              newStatus = 'postponed';
+              newStatusReason = 'Tạm hoãn do không đủ hàng tồn kho. Vui lòng chờ bổ sung hàng.';
+            } else {
+              newStatus = 'confirmed';
+              newStatusReason = 'Đơn hàng đã được xác nhận và đang chuẩn bị giao hàng.';
+            }
+          } else if (originalRequest.status === 'postponed') {
+            newStatus = 'confirmed';
+            newStatusReason = 'Đơn hàng đã được xác nhận sau khi bổ sung hàng tồn kho.';
+          }
+          
+          newRequests[requestToProcessIndex] = {
+            ...originalRequest,
+            status: newStatus,
+            statusReason: newStatusReason,
+            lastUpdatedAt: new Date().toISOString(),
+            forcePostponed: false,
+          };
+
+          // Show notification for status change
+          if (newStatus !== originalRequest.status) {
+            setNotification({
+              type: newStatus === 'confirmed' ? 'success' : 'info',
+              message: `Đơn hàng ${originalRequest.id} đã được cập nhật: ${newStatus === 'confirmed' ? 'Xác nhận' : 'Tạm hoãn'}`
+            });
+            setTimeout(() => setNotification(null), 5000);
+          }
+
+          return newRequests;
+        }
+        
+        return prevRequests;
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const addProductLine = () => append({ productId: '', quantity: 1, unit: '' });
+  const removeProductLine = (idx: number) => {
+    if (fields.length > 1) remove(idx);
+  };
+
+  const getProductName = (productId: string) => 
+    productsList.find(p => p.id === productId)?.name || 'Sản phẩm không xác định';
+
+  const onSubmit = async (data: DistributionFormData) => {
+    setIsSubmitting(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const newRequest: DistributionRequest = {
+      id: 'DH' + Date.now().toString().slice(-6),
+      products: data.products,
+      deliveryAddress: data.deliveryAddress,
+      submittedAt: new Date().toISOString(),
+      lastUpdatedAt: new Date().toISOString(),
+      status: 'processing',
+      statusReason: 'Yêu cầu của bạn đã được tiếp nhận và đang chờ xử lý.',
+      forcePostponed: forcePostponed,
+    };
+    
+    setRequests(prev => [newRequest, ...prev]);
+    reset();
+    setIsSubmitting(false);
+    setForcePostponed(false);
+    
+    setNotification({
+      type: 'success',
+      message: `Đã gửi yêu cầu thành công! Mã đơn: ${newRequest.id}`
+    });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleViewDetails = (request: DistributionRequest) => {
+    setSelectedRequest(request);
+    setIsDetailsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedRequest(null);
+  };
+
+  const getStatusConfig = (status: DistributionRequest['status']) => {
+    switch (status) {
+      case 'processing': 
+        return { 
+          text: 'Đang xử lý', 
+          color: 'bg-blue-100 text-blue-800 border-blue-200', 
+          icon: Clock,
+          bgColor: 'bg-blue-50',
+          iconColor: 'text-blue-600'
+        };
+      case 'postponed': 
+        return { 
+          text: 'Tạm hoãn', 
+          color: 'bg-amber-100 text-amber-800 border-amber-200', 
+          icon: AlertCircle,
+          bgColor: 'bg-amber-50',
+          iconColor: 'text-amber-600'
+        };
+      case 'confirmed': 
+        return { 
+          text: 'Đã xác nhận', 
+          color: 'bg-green-100 text-green-800 border-green-200', 
+          icon: CheckCircle,
+          bgColor: 'bg-green-50',
+          iconColor: 'text-green-600'
+        };
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border-l-4 transition-all duration-300 ${
+          notification.type === 'success' ? 'bg-green-50 border-green-400 text-green-800' :
+          notification.type === 'error' ? 'bg-red-50 border-red-400 text-red-800' :
+          'bg-blue-50 border-blue-400 text-blue-800'
+        }`}>
+          <div className="flex items-center gap-2">
+            {notification.type === 'success' && <CheckCircle className="h-5 w-5" />}
+            {notification.type === 'error' && <AlertCircle className="h-5 w-5" />}
+            {notification.type === 'info' && <Clock className="h-5 w-5" />}
+            <span className="font-medium">{notification.message}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl mb-4 shadow-lg">
+            <Package className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Hệ thống Phân phối Hàng hóa
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Gửi yêu cầu phân phối sản phẩm một cách nhanh chóng và theo dõi trạng thái real-time
+          </p>
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Form Section */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <Send className="h-6 w-6" />
+                  Tạo yêu cầu mới
+                </h2>
+                <p className="text-blue-100 mt-1">Điền thông tin chi tiết để gửi yêu cầu phân phối</p>
+              </div>
+
+              <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-8">
+                {/* Products Section */}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                      <Package className="h-5 w-5 text-blue-600" />
+                      Danh sách sản phẩm
+                      <span className="text-red-500">*</span>
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={addProductLine}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Thêm sản phẩm
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {fields.map((item, idx) => (
+                      <div key={item.id} className="bg-gray-50 rounded-2xl p-6 border border-gray-200 hover:border-blue-300 transition-colors">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Sản phẩm
+                            </label>
+                            <select
+                              {...register(`products.${idx}.productId` as const)}
+                              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            >
+                              <option value="">Chọn sản phẩm...</option>
+                              {productsList.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name} ({p.category})
+                                </option>
+                              ))}
+                            </select>
+                            {errors.products?.[idx]?.productId && (
+                              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                                <AlertCircle className="h-4 w-4" />
+                                {errors.products[idx]?.productId?.message}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Số lượng
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              {...register(`products.${idx}.quantity` as const)}
+                              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            />
+                            {errors.products?.[idx]?.quantity && (
+                              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                                <AlertCircle className="h-4 w-4" />
+                                {errors.products[idx]?.quantity?.message}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-end gap-2">
+                            <div className="flex-1">
+                              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Đơn vị
+                              </label>
+                              <select
+                                {...register(`products.${idx}.unit` as const)}
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              >
+                                <option value="">Chọn đơn vị</option>
+                                {unitOptions.map((u) => (
+                                  <option key={u} value={u}>{u}</option>
+                                ))}
+                              </select>
+                              {errors.products?.[idx]?.unit && (
+                                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                                  <AlertCircle className="h-4 w-4" />
+                                  {errors.products[idx]?.unit?.message}
+                                </p>
+                              )}
+                            </div>
+                            {fields.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeProductLine(idx)}
+                                className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                              >
+                                <X className="h-5 w-5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Delivery Address */}
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-green-600" />
+                    Địa chỉ giao hàng
+                    <span className="text-red-500">*</span>
+                  </h3>
+                  <div className="bg-green-50 rounded-2xl p-6 border border-green-200">
+                    <textarea
+                      {...register('deliveryAddress')}
+                      rows={4}
+                      placeholder="Nhập địa chỉ chi tiết bao gồm số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
+                      className="w-full px-4 py-3 bg-white border border-green-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors resize-none"
+                    />
+                    {errors.deliveryAddress && (
+                      <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" />
+                        {errors.deliveryAddress.message}
+                      </p>
+                    )}
+                    <p className="text-green-700 text-sm mt-2">
+                      💡 Địa chỉ chi tiết giúp quá trình giao hàng được nhanh chóng và chính xác
+                    </p>
+                  </div>
+                </div>
+
+                {/* Test Tools */}
+                <div className="bg-amber-50 rounded-2xl p-6 border border-amber-200">
+                  <h4 className="text-sm font-semibold text-amber-800 mb-3">🔧 Công cụ Test</h4>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={forcePostponed}
+                      onChange={(e) => setForcePostponed(e.target.checked)}
+                      className="w-4 h-4 text-amber-600 bg-white border-amber-300 rounded focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-amber-800">
+                      Buộc trạng thái "Tạm hoãn" cho yêu cầu tiếp theo
+                    </span>
+                  </label>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:transform-none"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="h-5 w-5 animate-spin" />
+                        Đang gửi yêu cầu...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-5 w-5" />
+                        Gửi yêu cầu phân phối
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => reset()}
+                    className="px-8 py-4 bg-gray-100 text-gray-700 font-bold rounded-2xl hover:bg-gray-200 transition-colors"
+                  >
+                    <RefreshCw className="h-5 w-5 inline mr-2" />
+                    Làm mới
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {/* Requests History */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden sticky top-6">
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Lịch sử đơn hàng
+                </h3>
+                <p className="text-purple-100 text-sm mt-1">
+                  {requests.length} yêu cầu
+                </p>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto">
+                {requests.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p className="font-medium">Chưa có yêu cầu nào</p>
+                    <p className="text-sm">Tạo yêu cầu đầu tiên của bạn</p>
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-3">
+                    {requests.map((request) => {
+                      const statusConfig = getStatusConfig(request.status);
+                      const StatusIcon = statusConfig.icon;
+                      
+                      return (
+                        <div
+                          key={request.id}
+                          onClick={() => handleViewDetails(request)}
+                          className="bg-gray-50 rounded-2xl p-4 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200 hover:border-blue-300"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-900">#{request.id}</span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
+                                {statusConfig.text}
+                              </span>
+                            </div>
+                            <StatusIcon className={`h-4 w-4 ${statusConfig.iconColor}`} />
+                          </div>
+                          
+                          <div className="space-y-2 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Package className="h-4 w-4" />
+                              <span>{request.products.length} sản phẩm</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>{new Date(request.submittedAt).toLocaleDateString('vi-VN')}</span>
+                            </div>
+                          </div>
+
+                          {request.status === 'postponed' && (
+                            <div className="mt-3 p-2 bg-amber-50 rounded-lg border border-amber-200">
+                              <p className="text-xs text-amber-800 font-medium">
+                                ⚠️ {request.statusReason}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Important Information */}
+        <div className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-8 border border-blue-200">
+          <div className="flex items-start gap-6">
+            <div className="bg-blue-600 p-3 rounded-2xl">
+              <AlertCircle className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-blue-900 mb-4">Thông tin quan trọng</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-blue-800">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-sm">Xử lý trong 24-48 giờ làm việc</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    <span className="text-sm">Kiểm tra hạn mức sản phẩm</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    <span className="text-sm">Địa chỉ phải chính xác</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    <span className="text-sm">Cập nhật trạng thái tự động</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Order Details Modal */}
+      {isDetailsModalOpen && selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white rounded-t-3xl border-b border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-2xl ${getStatusConfig(selectedRequest.status).bgColor}`}>
+                    {React.createElement(getStatusConfig(selectedRequest.status).icon, {
+                      className: `h-6 w-6 ${getStatusConfig(selectedRequest.status).iconColor}`
+                    })}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Chi tiết đơn hàng #{selectedRequest.id}
+                    </h2>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium border ${getStatusConfig(selectedRequest.status).color}`}>
+                      {getStatusConfig(selectedRequest.status).text}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={closeModal}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <X className="h-6 w-6 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Status Message */}
+              <div className={`p-4 rounded-2xl border ${
+                selectedRequest.status === 'confirmed' ? 'bg-green-50 border-green-200' :
+                selectedRequest.status === 'postponed' ? 'bg-amber-50 border-amber-200' :
+                'bg-blue-50 border-blue-200'
+              }`}>
+                <p className={`font-medium ${
+                  selectedRequest.status === 'confirmed' ? 'text-green-800' :
+                  selectedRequest.status === 'postponed' ? 'text-amber-800' :
+                  'text-blue-800'
+                }`}>
+                  {selectedRequest.statusReason}
+                </p>
+              </div>
+
+              {/* Order Information */}
+              <div className="bg-gray-50 rounded-2xl p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                      <User className="h-5 w-5 text-blue-600" /> Mã đơn hàng
+                    </h3>
+                    <p className="text-lg font-mono text-blue-900">#{selectedRequest.id}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-indigo-600" /> Thời gian gửi
+                    </h3>
+                    <p className="text-base text-gray-700">{new Date(selectedRequest.submittedAt).toLocaleString('vi-VN')}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-green-600" /> Cập nhật lần cuối
+                    </h3>
+                    <p className="text-base text-gray-700">{new Date(selectedRequest.lastUpdatedAt).toLocaleString('vi-VN')}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-emerald-600" /> Địa chỉ giao hàng
+                    </h3>
+                    <p className="text-base text-gray-700 whitespace-pre-line">{selectedRequest.deliveryAddress}</p>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <Package className="h-5 w-5 text-blue-600" /> Danh sách sản phẩm
+                  </h3>
+                  <div className="divide-y divide-gray-200">
+                    {selectedRequest.products.map((product, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-2">
+                        <span className="font-medium text-gray-800">{getProductName(product.productId)}</span>
+                        <span className="text-gray-600">{product.quantity} {product.unit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end pt-4">
+                <button
+                  onClick={closeModal}
+                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl hover:shadow-lg hover:scale-105 transition-all"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DistributionRequestPage;
