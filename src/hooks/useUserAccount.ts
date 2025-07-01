@@ -1,52 +1,42 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from './useAuth'; // Import useAuth thật
 
-type UserRole = 'admin' | 'client';
+// Bỏ các interface và mock data cũ
 
-interface User {
-  username: string;
-  role: UserRole;
-  avatar: string;
-}
-
-// Thông tin user mẫu - sẽ được thay thế bằng dữ liệu thực từ API/context
-const mockUser: User = {
-  username: 'agency',
-  role: 'admin',
-  avatar: 'A'  // Chữ cái đầu của username
-};
-
-interface UseUserAccountReturn {
-  user: User;
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
-  toggleMenu: () => void;
-  handleLogout: () => void;
-}
-
-export const useUserAccount = (): UseUserAccountReturn => {
+export const useUserAccount = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
-  
-  // Trong thực tế, sẽ lấy từ context/redux/api
-  const user = mockUser;
-  
+  const { user, logout } = useAuth(); // Lấy user và hàm logout thật từ context
+
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
-  
-  const handleLogout = () => {
-    // Xử lý logic đăng xuất thực tế
-    // Ví dụ: xóa token, xóa thông tin người dùng, v.v.
+
+  const handleLogout = async () => {
     setIsOpen(false);
-    navigate('/login');
+    await logout(); // Gọi hàm logout thật, nó sẽ tự gọi API và điều hướng
   };
-  
+
+  // Xử lý trường hợp user chưa được tải xong hoặc chưa đăng nhập
+  if (!user) {
+    // Trả về một trạng thái "trống" để component không bị lỗi
+    // Component `ProtectedRoute` sẽ lo việc điều hướng
+    return {
+      user: null,
+      isOpen: false,
+      toggleMenu: () => {},
+      handleLogout: () => {},
+    };
+  }
+
   return {
-    user,
+    user: {
+      username: user.username,
+      // Tạm thời gán role và avatar, sẽ cập nhật khi có dữ liệu từ API
+      role: 'admin', 
+      avatar: user.username.charAt(0).toUpperCase(),
+    },
     isOpen,
-    setIsOpen,
     toggleMenu,
-    handleLogout
+    handleLogout,
   };
 }; 
