@@ -13,9 +13,13 @@ export type LoginCredentials = z.infer<typeof loginSchema>;
 // Định nghĩa kiểu dữ liệu cho User
 export interface User {
   id: number;
-  username: string;
-  email?: string; // email có thể có hoặc không
-  // Thêm các thuộc tính khác của user nếu có, ví dụ: name, role, ...
+  username?: string;
+  full_name?: string;
+  email?: string;
+  phone_number?: string;
+  address?: string;
+  account_role?: string;
+  agency_id?: number; // For agency users
 }
 
 interface LoginResponse {
@@ -37,8 +41,20 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
  * @returns Promise chứa thông tin user
  */
 export const getMe = async (): Promise<User> => {
-  const { data } = await axiosClient.get<User>('/auth/me/');
-  return data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await axiosClient.get<any>('/auth/me/');
+  // Chuẩn hóa dữ liệu trả về từ API
+  const normalizedUser: User = {
+    id: data.user_id, // Map user_id sang id
+    username: data.username,
+    full_name: data.full_name,
+    email: data.email,
+    phone_number: data.phone_number,
+    address: data.address,
+    account_role: data.account_role,
+    agency_id: data.agency_id, // Sẽ là undefined nếu API không trả về
+  };
+  return normalizedUser;
 };
 
 /**

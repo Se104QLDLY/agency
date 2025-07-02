@@ -27,7 +27,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentUser);
       } catch (error) {
         setUser(null);
-        console.log('No active session');
       } finally {
         setIsLoading(false);
       }

@@ -1,635 +1,353 @@
-import React, { useState, useMemo } from 'react';
-import { Receipt, Trash2, Eye, AlertCircle, CheckCircle, Users, Mail, Phone, MapPin, CalendarDays, DollarSign, Search, MoreVertical, Edit3, ListChecks, LayoutGrid, List, XCircle, Clock } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Receipt, Trash2, Eye, AlertCircle, CheckCircle, Users, Mail, Phone, MapPin, CalendarDays, DollarSign, Search, MoreVertical, Edit3, ListChecks, LayoutGrid, List, XCircle, Clock, Loader2, FilePlus2, Send, Building } from 'lucide-react';
+import { getPayments, createPayment } from '../../api/payment.api';
+import { getAgencies, type PaginatedAgencies } from '../../api/agency.api';
+import { getAgencyForUser } from '../../api/staff.api';
+import { useAuth } from '../../hooks/useAuth';
+import type { Payment, PaymentPayload } from '../../types/payment.types';
+import type { Agency } from '../../types/agency.types';
 
-// Interface cho một bản ghi thanh toán
-interface PaymentRecord {
-  id: string;
-  agency: string;
-  address: string;
-  phone: string;
-  email: string;
-  paymentDate: string;
-  amount: number;
-  status: 'Đã thanh toán' | 'Chưa thanh toán';
-}
+// Component cho modal "Lập phiếu thu"
+const CreatePaymentModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  agencies: Agency[];
+  onSuccess: () => void;
+}> = ({ isOpen, onClose, agencies, onSuccess }) => {
+  const { user } = useAuth();
+  const [formData, setFormData] = useState<Partial<PaymentPayload>>({
+    payment_date: new Date().toISOString().split('T')[0] // Mặc định ngày hôm nay
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedAgencyDebt, setSelectedAgencyDebt] = useState<number | null>(null);
 
-// Thông tin đại lý hiện tại (giả lập đăng nhập)
-const currentAgency = {
-  name: 'Đại lý Hà Nội',
-  address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội',
-  phone: '0901234567',
-  email: 'hanoi@example.com'
-};
+  // Reset form state when modal is opened/closed
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({ payment_date: new Date().toISOString().split('T')[0] });
+      setSelectedAgencyDebt(null);
+      setError('');
+      setLoading(false);
+    }
+  }, [isOpen]);
 
-// ---- Dữ liệu mẫu - chỉ các phiếu thu của đại lý hiện tại ----
-const initialPaymentRecords: PaymentRecord[] = [
-    { id: 'PT001', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-21', amount: 5000000, status: 'Đã thanh toán' },
-    { id: 'PT007', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-20', amount: 3200000, status: 'Chưa thanh toán' },
-    { id: 'PT015', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-19', amount: 4800000, status: 'Đã thanh toán' },
-    { id: 'PT023', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-18', amount: 2100000, status: 'Chưa thanh toán' },
-    { id: 'PT031', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-17', amount: 6500000, status: 'Đã thanh toán' },
-    { id: 'PT045', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-16', amount: 3800000, status: 'Chưa thanh toán' },
-];
+  const handleAgencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const agencyId = Number(e.target.value);
+    const selected = agencies.find(a => a.id === agencyId);
+    if (selected) {
+      setSelectedAgencyDebt(parseFloat(selected.current_debt));
+      setFormData(prev => ({ ...prev, agency_id: agencyId, amount_collected: undefined })); // Reset amount on agency change
+      setError(''); // Clear previous errors
+    } else {
+      setFormData(prev => ({ ...prev, agency_id: undefined, amount_collected: undefined }));
+      setSelectedAgencyDebt(null);
+    }
+  };
 
-// Component cho card phiếu thu (mobile view)
-const PaymentCard: React.FC<{
-  record: PaymentRecord;
-  onDelete: (record: PaymentRecord) => void;
-  onViewDetail: (record: PaymentRecord) => void;
-}> = ({ record, onDelete, onViewDetail }) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // The field name from the input is 'amount', but our state uses 'amount_collected'
+    const fieldName = name === 'amount' ? 'amount_collected' : name;
+
+    if (fieldName === 'amount_collected') {
+      const amount = Number(value);
+       // Basic client-side validation for better UX
+      if (selectedAgencyDebt !== null && amount > selectedAgencyDebt) {
+        setError(`Số tiền thu không được vượt quá công nợ: ${selectedAgencyDebt.toLocaleString('vi-VN')} VNĐ`);
+      } else if (amount < 0) {
+        setError('Số tiền thu không được là số âm.');
+      } else {
+        setError(''); // Clear error if value is valid
+      }
+      setFormData(prev => ({ ...prev, [fieldName]: value ? amount : undefined }));
+    }
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, payment_date: e.target.value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Validate form data
+    if (!formData.agency_id || formData.amount_collected === undefined || !formData.payment_date) {
+      setError('Vui lòng điền đầy đủ thông tin: Đại lý, Số tiền thu, và Ngày thu tiền.');
+      return;
+    }
+    
+    if (formData.amount_collected <= 0) {
+        setError('Số tiền thu phải là một số dương.');
+        return;
+    }
+
+    if (selectedAgencyDebt !== null && formData.amount_collected > selectedAgencyDebt) {
+        setError(`Số tiền thu không được vượt quá công nợ hiện tại.`);
+        return;
+    }
+
+    setError('');
+    setLoading(true);
+
+    try {
+      if (!formData.agency_id || !formData.amount_collected) {
+        throw new Error("Thông tin không hợp lệ");
+      }
+      const payload: PaymentPayload = {
+        agency_id: formData.agency_id,
+        amount_collected: formData.amount_collected,
+        payment_date: formData.payment_date,
+      };
+
+      await createPayment(payload);
+      onSuccess(); // Callback to refresh data on parent component
+      onClose(); // Close modal on success
+    } catch (err: any) {
+        // More robust error handling
+        let errorMessage = 'Tạo phiếu thu thất bại. Vui lòng thử lại.';
+        if (err.response && err.response.data) {
+            const errorData = err.response.data;
+            // Extract first error message from DRF's validation responses
+            const keys = Object.keys(errorData);
+            if (keys.length > 0) {
+                // It can be an array of strings or a string
+                const firstError = errorData[keys[0]!];
+                if (Array.isArray(firstError)) {
+                    errorMessage = firstError[0];
+                } else {
+                    errorMessage = String(firstError);
+                }
+            }
+        }
+        setError(errorMessage);
+        console.error("Create payment error:", err.response?.data || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  if (!isOpen) return null;
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-all duration-200 hover:border-blue-200">
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Receipt className="w-4 h-4 text-blue-600" />
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
+        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><FilePlus2/>Lập Phiếu Thu Tiền</h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100"><XCircle className="w-6 h-6 text-gray-500"/></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label htmlFor="agency_id" className="block text-sm font-medium text-gray-700 mb-1">Chọn Đại Lý</label>
+            <select
+              id="agency_id"
+              name="agency_id"
+              onChange={handleAgencyChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              required
+              value={formData.agency_id || ''}
+            >
+              <option value="">-- Chọn một đại lý --</option>
+              {agencies.map(agency => (
+                <option key={agency.id} value={agency.id}>{agency.name} (ID: {agency.id})</option>
+              ))}
+            </select>
           </div>
-          <span className="font-semibold text-blue-700 text-sm">{record.id}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={() => onViewDetail(record)}
-            className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
-            title="Xem chi tiết"
-          >
-            <Eye className="w-4 h-4 text-blue-600" />
-          </button>
-          <button 
-            onClick={() => onDelete(record)}
-            className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-            title="Xóa phiếu thu"
-          >
-            <Trash2 className="w-4 h-4 text-red-500" />
-          </button>
-        </div>
+          {selectedAgencyDebt !== null && (
+            <div className="p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-800 rounded-r-lg">
+              <p className="font-semibold">Công nợ hiện tại:</p>
+              <p className="text-lg font-bold">{selectedAgencyDebt.toLocaleString('vi-VN')} VNĐ</p>
+            </div>
+          )}
+          <div>
+            <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">Số Tiền Thu (VNĐ)</label>
+            <input
+              type="number"
+              id="amount"
+              name="amount"
+              value={formData.amount_collected || ''}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Nhập số tiền"
+              required
+              max={selectedAgencyDebt !== null ? selectedAgencyDebt : undefined}
+              min="1"
+            />
       </div>
-      
-      <div className="space-y-2">
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <div className="flex items-center gap-1">
-            <CalendarDays className="w-3 h-3" />
-            <span>{record.paymentDate}</span>
+          <div>
+            <label htmlFor="payment_date" className="block text-sm font-medium text-gray-700 mb-1">Ngày Thu Tiền</label>
+            <input
+              type="date"
+              id="payment_date"
+              name="payment_date"
+              value={formData.payment_date}
+              onChange={handleDateChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
           </div>
-        </div>
-        
-        <div className="pt-2 border-t border-gray-100">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">Số tiền thu:</span>
-            <span className="font-bold text-green-600 text-lg">
-              {record.amount.toLocaleString('vi-VN')} VNĐ
-            </span>
+          {error && <p className="text-red-500 text-sm font-bold bg-red-50 p-2 rounded-md">{error}</p>}
+          <div className="flex justify-end pt-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold disabled:bg-blue-300"
+            >
+              {loading ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : <Send className="w-5 h-5 mr-2" />}
+              {loading ? 'Đang xử lý...' : 'Lập Phiếu Thu'}
+            </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
 };
 
-// Component cho modal chi tiết phiếu thu
-const DetailModal: React.FC<{
-  record: PaymentRecord | null;
-  onClose: () => void;
-  onPay: (id: string) => Promise<void>;
-  loadingPay: boolean;
-}> = ({ record, onClose, onPay, loadingPay }) => {
-  if (!record) return null;
+const PaymentPage: React.FC = () => {
+  const { user } = useAuth();
+  const [records, setRecords] = useState<Payment[]>([]);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+  const [title, setTitle] = useState('Quản lý Phiếu Thu Tiền');
 
-  const isPaid = record.status === 'Đã thanh toán';
+  const fetchAllData = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+        // Fetch agencies first, as they are needed for context.
+        const agenciesResponse: PaginatedAgencies = await getAgencies();
+        const agenciesList = agenciesResponse.results || [];
+        setAgencies(agenciesList);
+
+        let paymentsResponse;
+        if (user.account_role === 'admin') {
+            setTitle('Quản lý tất cả Phiếu Thu Tiền');
+            paymentsResponse = await getPayments();
+        } else {
+            // For non-admins, first check if agency_id is directly on the user object (for agents)
+            let agencyId: number | null = user.agency_id || null;
+
+            // If not found, then try to fetch it via staff mapping (for staff)
+            if (!agencyId) {
+                agencyId = await getAgencyForUser(user.id);
+            }
+
+            if (agencyId) {
+                paymentsResponse = await getPayments(agencyId);
+                const agency = agenciesList.find((a: Agency) => a.id === agencyId);
+                setTitle(agency ? `Phiếu Thu của ${agency.name}` : 'Phiếu Thu của Đại lý');
+            } else {
+                paymentsResponse = { results: [] }; // No agency assigned, show no payments
+                setTitle('Không có dữ liệu phiếu thu');
+            }
+        }
+        setRecords(paymentsResponse?.results || []);
+    } catch (error) {
+        console.error("Failed to fetch payment page data:", error);
+        // Optionally set an error state to show in the UI
+    } finally {
+        setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchAllData();
+  }, [user]);
+  
+  const totalCollected = useMemo(() => {
+    return records.reduce((sum, record) => sum + parseFloat(record.amount_collected), 0);
+  }, [records]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-2xl flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg border-4 border-white">
-              <Receipt className="w-8 h-8 text-white drop-shadow" />
-            </div>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <CreatePaymentModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        agencies={agencies}
+        onSuccess={() => {
+          fetchAllData(); // Refresh data on success
+        }}
+      />
+      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-extrabold">Chi tiết phiếu thu</h2>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 border border-green-400 text-green-700 font-semibold text-sm shadow">
-                  <CheckCircle className="w-5 h-5" />
-                  Hoàn thành
-                </span>
-              </div>
-              <p className="text-blue-100 font-semibold flex items-center gap-2 mt-1">
-                <ListChecks className="w-4 h-4 text-white" />
-                Mã phiếu: <span className="underline">{record.id}</span>
-              </p>
-            </div>
+            <h1 className="text-3xl font-extrabold text-gray-800 flex items-center gap-3">
+              <Receipt className="w-8 h-8 text-blue-600" />
+              {title}
+            </h1>
+            <p className="text-gray-500 mt-1">Theo dõi và quản lý các khoản thu tiền từ đại lý.</p>
           </div>
           <button
-            onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-red-500 transition-colors shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400"
-            title="Đóng"
+            onClick={() => setCreateModalOpen(true)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md transition-colors"
           >
-            <XCircle className="w-7 h-7 text-gray-400 hover:text-white transition-colors" />
+            <FilePlus2 className="w-5 h-5 mr-2" />
+            Lập Phiếu Thu
           </button>
         </div>
-        
-        <div className="p-6 space-y-6">
-          <div className="bg-gray-50 rounded-xl p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              Thông tin đại lý
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-gray-500">Tên đại lý</label>
-                <p className="font-medium text-gray-900">{currentAgency.name}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-500">Mã phiếu thu</label>
-                <p className="font-medium text-blue-600">{record.id}</p>
-              </div>
-            </div>
-            <div className="mt-3">
-              <label className="text-sm text-gray-500">Địa chỉ</label>
-              <p className="font-medium text-gray-900">{currentAgency.address}</p>
-            </div>
-          </div>
-          
-          <div className="bg-gray-50 rounded-xl p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <Phone className="w-5 h-5 text-green-600" />
-              Thông tin liên hệ
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-gray-400" />
-                <div>
-                  <label className="text-sm text-gray-500">Số điện thoại</label>
-                  <p className="font-medium text-gray-900">{currentAgency.phone}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-gray-400" />
-                <div>
-                  <label className="text-sm text-gray-500">Email</label>
-                  <p className="font-medium text-gray-900">{currentAgency.email}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-green-600" />
-              Thông tin thanh toán
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-4 h-4 text-gray-400" />
-                <div>
-                  <label className="text-sm text-gray-500">Ngày thu tiền</label>
-                  <p className="font-medium text-gray-900">{record.paymentDate}</p>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-gray-500">Số tiền thu</label>
-                <p className="text-2xl font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VNĐ</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              {isPaid ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              ) : (
-                <Clock className="w-5 h-5 text-yellow-500" />
-              )}
-              Trạng thái
-            </h3>
-            <div className="flex items-center gap-2">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium
-                ${isPaid
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-yellow-100 text-yellow-800'}
-              `}>
-                {isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
-              </span>
-              <span className="text-sm text-gray-500">
-                {isPaid
-                  ? 'Phiếu thu đã được xử lý thành công'
-                  : 'Phiếu thu chưa được thanh toán'}
-              </span>
-            </div>
-          </div>
         </div>
         
-        <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
-          <div className="flex justify-end gap-3">
-            <button 
-              onClick={onClose} 
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-            >
-              Đóng
-            </button>
-            {!isPaid && (
-              <button
-                onClick={() => onPay(record.id)}
-                disabled={loadingPay}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-60"
-              >
-                {loadingPay ? (
-                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                  </svg>
-                ) : (
-                  <DollarSign className="w-4 h-4" />
-                )}
-                Thanh toán
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Component cho modal xác nhận xóa
-const DeleteModal: React.FC<{
-  record: PaymentRecord | null;
-  onConfirm: () => void;
-  onCancel: () => void;
-}> = ({ record, onConfirm, onCancel }) => {
-  if (!record) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-            <Trash2 className="h-6 w-6 text-red-600" />
-          </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Xác nhận xóa phiếu thu</h3>
-          <p className="text-gray-600 mb-6">
-            Bạn có chắc chắn muốn xóa phiếu thu <strong>{record.id}</strong>?<br />
-            <span className="text-sm text-red-600">Hành động này không thể hoàn tác.</span>
-          </p>
-          <div className="flex gap-3">
-            <button 
-              onClick={onCancel} 
-              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
-            >
-              Hủy bỏ
-            </button>
-            <button 
-              onClick={onConfirm} 
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
-            >
-              Xóa phiếu thu
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Component chính
-const PaymentPage: React.FC = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [showDetailModal, setShowDetailModal] = useState(false);
-    const [recordToDelete, setRecordToDelete] = useState<PaymentRecord | null>(null);
-    const [recordToView, setRecordToView] = useState<PaymentRecord | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
-    const itemsPerPage = 8;
-    const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-    const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>(initialPaymentRecords);
-    const [loadingPay, setLoadingPay] = useState(false);
-
-    // Lọc các phiếu thu chỉ thuộc về đại lý hiện tại
-    const filteredRecords = paymentRecords.filter(record =>
-        record.agency === currentAgency.name && (
-            record.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            record.paymentDate.includes(searchTerm) ||
-            record.amount.toString().includes(searchTerm)
-        )
-    );
-  
-    const indexOfLastRecord = currentPage * itemsPerPage;
-    const indexOfFirstRecord = indexOfLastRecord - itemsPerPage;
-    const currentRecords = filteredRecords.slice(indexOfFirstRecord, indexOfLastRecord);
-    const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
-  
-    const handlePageChange = (pageNumber: number) => {
-      setCurrentPage(pageNumber);
-    };
-
-    const handleDeleteClick = (record: PaymentRecord) => {
-      setRecordToDelete(record);
-      setShowDeleteModal(true);
-    };
-
-    const handleViewDetail = (record: PaymentRecord) => {
-      setRecordToView(record);
-      setShowDetailModal(true);
-    };
-
-    const handleCloseDetail = () => {
-      setShowDetailModal(false);
-      setRecordToView(null);
-    };
-
-    const handleDeleteConfirm = async () => {
-      if (recordToDelete) {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          setPaymentRecords(paymentRecords.filter(r => r.id !== recordToDelete.id));
-          setShowDeleteModal(false);
-          setRecordToDelete(null);
-          setToast({ type: 'success', message: `Đã xóa phiếu thu ${recordToDelete.id} thành công!` });
-          setTimeout(() => setToast(null), 3000);
-        } catch (error) {
-          setToast({ type: 'error', message: 'Có lỗi xảy ra khi xóa phiếu thu!' });
-          setTimeout(() => setToast(null), 3000);
-        }
-      }
-    };
-
-    const handleDeleteCancel = () => {
-      setShowDeleteModal(false);
-      setRecordToDelete(null);
-    };
-
-    const handlePay = async (id: string) => {
-      setLoadingPay(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setPaymentRecords(records =>
-        records.map(r => r.id === id ? { ...r, status: 'Đã thanh toán' } : r)
-      );
-      setShowDetailModal(false);
-      setToast({ type: 'success', message: `Đã thanh toán phiếu thu ${id} thành công!` });
-      setLoadingPay(false);
-    };
-
-    const totalPayments = filteredRecords.length;
-    const totalAmount = filteredRecords.reduce((sum, r) => sum + r.amount, 0);
-
-    return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-            {toast && (
-                <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 font-semibold animate-fade-in-down ${toast.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {toast.type === 'success' ? <CheckCircle className="h-6 w-6" /> : <AlertCircle className="h-6 w-6" />}
-                    {toast.message}
-                </div>
-            )}
-
-            <div className="max-w-7xl mx-auto">
-                {/* Header với thông tin đại lý */}
-                <header className="mb-8">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-                            <Receipt className="h-7 w-7 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-extrabold text-gray-800">Phiếu Thu Của Tôi</h1>
-                            <p className="text-blue-600 font-semibold">{currentAgency.name}</p>
-                        </div>
-                    </div>
-                    <p className="text-gray-600 mt-1 ml-1">Quản lý các phiếu thu của đại lý bạn.</p>
-                </header>
-
-                {/* Thẻ thống kê */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-blue-500 flex items-center gap-5">
-                        <div className="bg-blue-100 p-3 rounded-full">
-                            <ListChecks className="h-7 w-7 text-blue-600" />
-                        </div>
-                        <div>
-                            <h3 className="text-gray-500 font-semibold">Tổng phiếu thu</h3>
-                            <p className="text-3xl font-bold text-gray-800">{totalPayments}</p>
-                        </div>
-                    </div>
-                    <div className="bg-white rounded-2xl shadow-md p-6 border-l-4 border-green-500 flex items-center gap-5">
-                        <div className="bg-green-100 p-3 rounded-full">
-                            <DollarSign className="h-7 w-7 text-green-600" />
-                        </div>
-                        <div>
-                            <h3 className="text-gray-500 font-semibold">Tổng số tiền</h3>
-                            <p className="text-2xl lg:text-3xl font-bold text-gray-800">{(totalAmount / 1000000).toFixed(2)}M</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Thanh tìm kiếm và chuyển đổi view */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm theo mã phiếu, ngày thu..."
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
-                                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-2"
-                            >
-                                {viewMode === 'table' ? <LayoutGrid size={16}/> : <List size={16}/>}
-                                {viewMode === 'table' ? 'Card View' : 'Table View'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Bảng/Card hiển thị phiếu thu */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    {viewMode === 'table' ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50 border-b border-gray-200">
-                                    <tr>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">
-                                            <span className="flex items-center gap-1">
-                                                <ListChecks className="h-5 w-5" />
-                                                Mã phiếu
-                                            </span>
-                                        </th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">
-                                            <span className="flex items-center gap-1">
-                                                <CalendarDays className="h-5 w-5" />
-                                                Ngày thu
-                                            </span>
-                                        </th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">
-                                            <span className="flex items-center gap-1">
-                                                <Users className="h-5 w-5" />
-                                                Đại lý
-                                            </span>
-                                        </th>
-                                        <th className="text-right py-3 px-4 font-semibold text-gray-700 text-sm">
-                                            <span className="flex items-center gap-1 justify-end">
-                                                <DollarSign className="h-5 w-5" />
-                                                Số tiền
-                                            </span>
-                                        </th>
-                                        <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">
-                                            <span className="flex items-center gap-1 justify-center">
-                                                <Users className="h-5 w-5" />
-                                                Trạng thái
-                                            </span>
-                                        </th>
-                                        <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm">
-                                            <span className="flex items-center gap-1 justify-center">
-                                                <MoreVertical className="h-5 w-5" />
-                                                Thao tác
-                                            </span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {currentRecords.map((record) => (
-                                        <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="py-3 px-4">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                        <Receipt className="w-4 h-4 text-blue-600" />
-                                                    </div>
-                                                    <span className="font-semibold text-blue-700">{record.id}</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-4 text-sm text-gray-600">{record.paymentDate}</td>
-                                            <td className="py-3 px-4 text-gray-700">
-                                                <div className="font-semibold">{record.agency}</div>
-                                                <div className="text-xs text-gray-500 flex items-center gap-1"><Phone size={14}/> {record.phone}</div>
-                                            </td>
-                                            <td className="py-3 px-4 text-right">
-                                                <span className="font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VNĐ</span>
-                                            </td>
-                                            <td className="py-3 px-4 text-center">
-                                                {record.status === 'Đã thanh toán' ? (
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-lg shadow-sm">
-                                                        <CheckCircle className="h-4 w-4" /> Đã thanh toán
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-lg shadow-sm">
-                                                        <Clock className="h-4 w-4" /> Chưa thanh toán
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="py-3 px-4 text-center">
-                                                {record.status === 'Chưa thanh toán' ? (
-                                                    <button
-                                                        onClick={async () => {
-                                                            setLoadingPay(true);
-                                                            await handlePay(record.id);
-                                                            setLoadingPay(false);
-                                                        }}
-                                                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
-                                                        disabled={loadingPay}
-                                                    >
-                                                        {loadingPay ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> : <DollarSign className="h-5 w-5" />}
-                                                        Thanh toán
-                                                    </button>
-                                                ) : (
-                                                    <span className="flex items-center justify-center gap-1 px-4 py-2 text-gray-500 font-semibold">
-                                                        <CheckCircle className="h-5 w-5" /> Đã xử lý
-                                                    </span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : (
-                        <div className="p-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {currentRecords.map((record) => (
-                                    <PaymentCard 
-                                        key={record.id} 
-                                        record={record} 
-                                        onDelete={handleDeleteClick} 
-                                        onViewDetail={handleViewDetail} 
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    
-                    {filteredRecords.length === 0 && (
-                        <div className="text-center py-12">
-                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Search className="w-6 h-6 text-gray-400" />
-                            </div>
-                            <p className="text-gray-500 text-lg">Không tìm thấy phiếu thu nào</p>
-                            <p className="text-gray-400 text-sm">Thử thay đổi từ khóa tìm kiếm</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Phân trang */}
-                {filteredRecords.length > itemsPerPage && (
-                    <div className="flex justify-center mt-6">
-                        <nav className="flex items-center gap-1">
-                            <button 
-                                onClick={() => handlePageChange(Math.max(1, currentPage - 1))} 
-                                disabled={currentPage === 1} 
-                                className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                Trước
-                            </button>
-                            {[...Array(Math.min(5, totalPages))].map((_, index) => {
-                                const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + index;
-                                if (pageNum > totalPages) return null;
-                                return (
-                                    <button 
-                                        key={pageNum} 
-                                        onClick={() => handlePageChange(pageNum)} 
-                                        className={`px-3 py-2 text-sm border rounded-lg transition-colors ${ 
-                                            currentPage === pageNum 
-                                                ? 'bg-blue-600 text-white' 
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                        }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                );
-                            })}
-                            <button 
-                                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))} 
-                                disabled={currentPage === totalPages} 
-                                className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                Tiếp
-                            </button>
-                        </nav>
-                    </div>
-                )}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+              </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white rounded-xl shadow p-5 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Tổng số phiếu thu</p>
+                <p className="text-2xl font-bold text-blue-600">{records.length}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <List className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
-
-            {/* Modal xác nhận xóa */}
-            {showDeleteModal && recordToDelete && (
-                <DeleteModal 
-                    record={recordToDelete} 
-                    onConfirm={handleDeleteConfirm} 
-                    onCancel={handleDeleteCancel} 
-                />
-            )}
-
-            {/* Modal chi tiết phiếu thu */}
-            {showDetailModal && recordToView && (
-                <DetailModal
-                  record={recordToView}
-                  onClose={handleCloseDetail}
-                  onPay={handlePay}
-                  loadingPay={loadingPay}
-                />
-            )}
-        </div>
-    );
+            <div className="bg-white rounded-xl shadow p-5 flex items-center justify-between">
+                <div>
+                <p className="text-sm font-medium text-gray-500">Tổng tiền đã thu</p>
+                <p className="text-2xl font-bold text-green-600">{totalCollected.toLocaleString('vi-VN')} VNĐ</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã Phiếu Thu</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên Đại Lý</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày Thu</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Số Tiền Thu</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Người Tạo</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {records.map((record) => (
+                  <tr key={record.payment_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap font-mono text-sm text-gray-700">PT{String(record.payment_id).padStart(5, '0')}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{record.agency_name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{new Date(record.payment_date).toLocaleDateString('vi-VN')}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-green-600">{parseFloat(record.amount_collected).toLocaleString('vi-VN')} VNĐ</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.user_name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                      <button className="text-blue-600 hover:text-blue-800 transition-colors">
+                        <Eye size={20} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
 
 export default PaymentPage;
