@@ -16,7 +16,7 @@ interface DebtReportData {
   agency_id: number;
   agency_name: string;
   total_debt: number;
-  debt_aging_buckets: {
+  debt_aging_buckets?: {
     "0-30": number;
     "31-60": number;
     "61-90": number;
@@ -181,7 +181,11 @@ const AgencyReportsPage: React.FC = () => {
 };
 
 // Một component con để vẽ biểu đồ tròn bằng SVG
-const DebtPieChart: React.FC<{ data: DebtReportData['debt_aging_buckets'], total: number }> = ({ data, total }) => {
+const DebtPieChart: React.FC<{ data?: DebtReportData['debt_aging_buckets'], total: number }> = ({ data, total }) => {
+  if (!data) {
+    return null; // Don't render if data is not available
+  }
+
   const categories = [
     { key: '0-30' as const, color: '#4ade80', label: 'Nợ trong hạn (0-30 ngày)' },
     { key: '31-60' as const, color: '#facc15', label: 'Quá hạn (31-60 ngày)' },
