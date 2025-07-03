@@ -13,14 +13,28 @@ const CreatePaymentModal: React.FC<{
   onClose: () => void;
   agencies: Agency[];
   onSuccess: () => void;
-}> = ({ isOpen, onClose, agencies, onSuccess }) => {
-  const { user } = useAuth();
+  user: ReturnType<typeof useAuth>['user']; // Accept user object as a prop
+}> = ({ isOpen, onClose, agencies, onSuccess, user }) => {
   const [formData, setFormData] = useState<Partial<PaymentPayload>>({
     payment_date: new Date().toISOString().split('T')[0] // Mặc định ngày hôm nay
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedAgencyDebt, setSelectedAgencyDebt] = useState<number | null>(null);
+
+  // Auto-select agency for non-admin users
+  useEffect(() => {
+    if (isOpen && user && user.account_role !== 'admin' && user.agency_id) {
+      const agentAgency = agencies.find(a => a.id === user.agency_id);
+      if (agentAgency) {
+        setFormData(prev => ({
+          ...prev,
+          agency_id: user.agency_id,
+        }));
+        setSelectedAgencyDebt(parseFloat(agentAgency.current_debt));
+      }
+    }
+  }, [isOpen, user, agencies]);
 
   // Reset form state when modal is opened/closed
   useEffect(() => {
@@ -142,9 +156,10 @@ const CreatePaymentModal: React.FC<{
               id="agency_id"
               name="agency_id"
               onChange={handleAgencyChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
               required
               value={formData.agency_id || ''}
+              disabled={user?.account_role !== 'admin'} // Disable for non-admins
             >
               <option value="">-- Chọn một đại lý --</option>
               {agencies.map(agency => (
@@ -210,6 +225,13 @@ const PaymentPage: React.FC = () => {
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [title, setTitle] = useState('Quản lý Phiếu Thu Tiền');
 
+  const handleOpenCreateModal = () => setCreateModalOpen(true);
+  const handleCloseCreateModal = () => setCreateModalOpen(false);
+  
+  const handleSuccess = () => {
+    fetchAllData(); // Re-fetch all data on success
+  };
+
   const fetchAllData = async () => {
     if (!user) return;
     setLoading(true);
@@ -262,11 +284,10 @@ const PaymentPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <CreatePaymentModal
         isOpen={isCreateModalOpen}
-        onClose={() => setCreateModalOpen(false)}
+        onClose={handleCloseCreateModal}
         agencies={agencies}
-        onSuccess={() => {
-          fetchAllData(); // Refresh data on success
-        }}
+        onSuccess={handleSuccess}
+        user={user} // Pass user to the modal
       />
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -278,7 +299,7 @@ const PaymentPage: React.FC = () => {
             <p className="text-gray-500 mt-1">Theo dõi và quản lý các khoản thu tiền từ đại lý.</p>
           </div>
           <button
-            onClick={() => setCreateModalOpen(true)}
+            onClick={handleOpenCreateModal}
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md transition-colors"
           >
             <FilePlus2 className="w-5 h-5 mr-2" />

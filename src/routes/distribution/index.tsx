@@ -3,6 +3,8 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Package, MapPin, Clock, CheckCircle, AlertCircle, Truck, Plus, X, Send, RefreshCw, Eye, Calendar, User } from 'lucide-react';
+import distributionApi, { type DistributionRequest as ApiDistributionRequest, type Product, type CreateDistributionRequest } from '../../api/distribution.api';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ProductLine {
   productId: string;
@@ -15,14 +17,44 @@ interface DistributionFormData {
   deliveryAddress: string;
 }
 
+// Frontend-specific request interface to maintain UI compatibility
 interface DistributionRequest extends DistributionFormData {
   id: string;
   submittedAt: string;
   lastUpdatedAt: string;
-  status: 'processing' | 'postponed' | 'confirmed';
+  status: 'processing' | 'postponed' | 'confirmed' | 'cancelled';
   statusReason?: string;
   forcePostponed: boolean;
 }
+
+// Transform API response to frontend format
+const transformApiToFrontend = (apiRequest: ApiDistributionRequest): DistributionRequest => ({
+  id: `DH${String(apiRequest.issue_id).padStart(6, '0')}`,
+  products: apiRequest.details?.map(detail => ({
+    productId: String(detail.item),
+    quantity: detail.quantity,
+    unit: 'Cái' // Default unit, could be enhanced with item details
+  })) || [],
+  deliveryAddress: 'Địa chỉ từ hệ thống', // Backend doesn't store delivery address
+  submittedAt: apiRequest.created_at || new Date().toISOString(),
+  lastUpdatedAt: apiRequest.created_at || new Date().toISOString(),
+  status: apiRequest.status,
+  statusReason: apiRequest.status_reason || getDefaultStatusReason(apiRequest.status),
+  forcePostponed: false
+});
+
+const getDefaultStatusReason = (status: string): string => {
+  switch (status) {
+    case 'processing':
+      return 'Yêu cầu của bạn đã được tiếp nhận và đang chờ xử lý.';
+    case 'confirmed':
+      return 'Đơn hàng đã được xác nhận và đang chuẩn bị giao hàng.';
+    case 'postponed':
+      return 'Tạm hoãn do không đủ hàng tồn kho. Vui lòng chờ bổ sung hàng.';
+    default:
+      return '';
+  }
+};
 
 const unitOptions = ['Thùng', 'Hộp', 'Chai', 'Gói', 'Kg', 'Lít', 'Cái'];
 
@@ -37,16 +69,12 @@ const schema = yup.object({
   deliveryAddress: yup.string().required('Vui lòng nhập địa chỉ giao hàng').min(10, 'Địa chỉ phải có ít nhất 10 ký tự'),
 });
 
-const productsList = [
-  { id: 'sp001', name: 'Sản phẩm Premium A', category: 'Cao cấp' },
-  { id: 'sp002', name: 'Sản phẩm Standard B', category: 'Tiêu chuẩn' },
-  { id: 'sp003', name: 'Sản phẩm Economy C', category: 'Phổ thông' },
-  { id: 'sp004', name: 'Sản phẩm Special D', category: 'Đặc biệt' },
-];
-
 const DistributionRequestPage: React.FC = () => {
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [requests, setRequests] = useState<DistributionRequest[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<DistributionRequest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [forcePostponed, setForcePostponed] = useState(false);
@@ -68,62 +96,88 @@ const DistributionRequestPage: React.FC = () => {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'products' });
 
-  // Auto-processing simulation
+  // Load data from API
   useEffect(() => {
-    const interval = setInterval(() => {
-      setRequests(prevRequests => {
-        const newRequests = [...prevRequests];
-        const requestToProcessIndex = newRequests.findIndex(r => 
-          r.status === 'processing' || (r.status === 'postponed' && Math.random() < 0.2)
-        );
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        console.log('Loading distribution data for user:', user);
+        
+        // Load products and requests in parallel
+        const [productsResponse, requestsResponse] = await Promise.all([
+          distributionApi.getProducts({ limit: 100 }),
+          user?.agency_id ? distributionApi.getDistributionRequests({ 
+            agency_id: user.agency_id,
+            limit: 50 
+          }) : Promise.resolve({ results: [] })
+        ]);
 
-        if (requestToProcessIndex !== -1) {
-          const originalRequest = newRequests[requestToProcessIndex];
-          if (!originalRequest) return prevRequests;
+        console.log('Products response:', productsResponse);
+        console.log('Requests response:', requestsResponse);
+        
+        setProducts(productsResponse.results);
+        setRequests(requestsResponse.results?.map(transformApiToFrontend) || []);
+      } catch (error: any) {
+        console.error('Error loading distribution data:', error);
+        console.error('Error details:', error.response?.data, error.response?.status);
+        
+        let errorMessage = 'Có lỗi khi tải dữ liệu. Vui lòng thử lại.';
+        if (error.response?.status === 401) {
+          errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        }
+        
+        setNotification({
+          type: 'error',
+          message: errorMessage
+        });
+        setTimeout(() => setNotification(null), 5000);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-          let newStatus: DistributionRequest['status'] = originalRequest.status;
-          let newStatusReason = originalRequest.statusReason;
-          
-          if (originalRequest.status === 'processing') {
-            const isPostponed = originalRequest.forcePostponed || Math.random() < 0.3;
-            if (isPostponed) {
-              newStatus = 'postponed';
-              newStatusReason = 'Tạm hoãn do không đủ hàng tồn kho. Vui lòng chờ bổ sung hàng.';
-            } else {
-              newStatus = 'confirmed';
-              newStatusReason = 'Đơn hàng đã được xác nhận và đang chuẩn bị giao hàng.';
-            }
-          } else if (originalRequest.status === 'postponed') {
-            newStatus = 'confirmed';
-            newStatusReason = 'Đơn hàng đã được xác nhận sau khi bổ sung hàng tồn kho.';
-          }
-          
-          newRequests[requestToProcessIndex] = {
-            ...originalRequest,
-            status: newStatus,
-            statusReason: newStatusReason,
-            lastUpdatedAt: new Date().toISOString(),
-            forcePostponed: false,
-          };
+    if (user) {
+      console.log('User exists, loading data...', user);
+      loadData();
+    } else {
+      console.log('No user found, skipping data load');
+      setIsLoading(false);
+    }
+  }, [user]);
 
-          // Show notification for status change
-          if (newStatus !== originalRequest.status) {
+  // Periodic refresh to check for status updates
+  useEffect(() => {
+    if (!user?.agency_id) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await distributionApi.getDistributionRequests({ 
+          agency_id: user.agency_id,
+          limit: 50 
+        });
+        const newRequests = response.results?.map(transformApiToFrontend) || [];
+        
+        // Check for status changes
+        const oldRequests = requests;
+        newRequests.forEach(newRequest => {
+          const oldRequest = oldRequests.find(r => r.id === newRequest.id);
+          if (oldRequest && oldRequest.status !== newRequest.status) {
             setNotification({
-              type: newStatus === 'confirmed' ? 'success' : 'info',
-              message: `Đơn hàng ${originalRequest.id} đã được cập nhật: ${newStatus === 'confirmed' ? 'Xác nhận' : 'Tạm hoãn'}`
+              type: newRequest.status === 'confirmed' ? 'success' : 'info',
+              message: `Đơn hàng ${newRequest.id} đã được cập nhật: ${getStatusText(newRequest.status)}`
             });
             setTimeout(() => setNotification(null), 5000);
           }
-
-          return newRequests;
-        }
+        });
         
-        return prevRequests;
-      });
-    }, 5000);
+        setRequests(newRequests);
+      } catch (error) {
+        console.error('Error refreshing requests:', error);
+      }
+    }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [user, requests]);
 
   const addProductLine = () => append({ productId: '', quantity: 1, unit: '' });
   const removeProductLine = (idx: number) => {
@@ -131,33 +185,82 @@ const DistributionRequestPage: React.FC = () => {
   };
 
   const getProductName = (productId: string) => 
-    productsList.find(p => p.id === productId)?.name || 'Sản phẩm không xác định';
+    products.find(p => String(p.item_id) === productId)?.item_name || 'Sản phẩm không xác định';
+
+  const getStatusText = (status: string): string => {
+    switch (status) {
+      case 'processing': return 'Đang xử lý';
+      case 'confirmed': return 'Đã xác nhận';
+      case 'postponed': return 'Tạm hoãn';
+      case 'cancelled': return 'Đã hủy';
+      default: return status;
+    }
+  };
 
   const onSubmit = async (data: DistributionFormData) => {
-    setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    if (!user?.agency_id) {
+      setNotification({
+        type: 'error',
+        message: 'Không xác định được đại lý. Vui lòng đăng nhập lại.'
+      });
+      setTimeout(() => setNotification(null), 5000);
+      return;
+    }
 
-    const newRequest: DistributionRequest = {
-      id: 'DH' + Date.now().toString().slice(-6),
-      products: data.products,
-      deliveryAddress: data.deliveryAddress,
-      submittedAt: new Date().toISOString(),
-      lastUpdatedAt: new Date().toISOString(),
-      status: 'processing',
-      statusReason: 'Yêu cầu của bạn đã được tiếp nhận và đang chờ xử lý.',
-      forcePostponed: forcePostponed,
-    };
+    setIsSubmitting(true);
     
-    setRequests(prev => [newRequest, ...prev]);
-    reset();
-    setIsSubmitting(false);
-    setForcePostponed(false);
-    
-    setNotification({
-      type: 'success',
-      message: `Đã gửi yêu cầu thành công! Mã đơn: ${newRequest.id}`
-    });
-    setTimeout(() => setNotification(null), 5000);
+    try {
+      const createData: CreateDistributionRequest = {
+        agency_id: user.agency_id,
+        items: data.products.map(product => {
+          const productInfo = products.find(p => String(p.item_id) === product.productId);
+          const basePrice = Number(productInfo?.price || 0);
+          const exportPrice = Math.round(basePrice * 1.02); // 102% của giá nhập
+          
+          return {
+            item: product.productId,
+            quantity: product.quantity,
+            unit_price: exportPrice
+          };
+        }),
+        delivery_address: data.deliveryAddress
+      };
+
+      const newApiRequest = await distributionApi.createDistributionRequest(createData);
+      const newRequest = transformApiToFrontend(newApiRequest);
+      
+      setRequests(prev => [newRequest, ...prev]);
+      reset();
+      setForcePostponed(false);
+      
+      setNotification({
+        type: 'success',
+        message: `Đã gửi yêu cầu thành công! Mã đơn: ${newRequest.id}`
+      });
+      setTimeout(() => setNotification(null), 5000);
+    } catch (error: any) {
+      console.error('Error creating distribution request:', error);
+      
+      // Handle specific business rule errors
+      let errorMessage = 'Có lỗi khi tạo yêu cầu. Vui lòng thử lại.';
+      
+      if (error.response?.status === 409) {
+        const errorData = error.response.data;
+        if (errorData.code === 'DEBT_LIMIT') {
+          errorMessage = `Vượt quá hạn mức công nợ. Hạn mức: ${errorData.max_debt}, Hiện tại: ${errorData.current_debt}`;
+        } else if (errorData.code === 'OUT_OF_STOCK') {
+          errorMessage = `Không đủ hàng tồn kho cho ${errorData.item_name}. Còn lại: ${errorData.available_qty}`;
+        }
+      }
+      
+      setNotification({
+        type: 'error',
+        message: errorMessage
+      });
+      setTimeout(() => setNotification(null), 8000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleViewDetails = (request: DistributionRequest) => {
@@ -196,8 +299,58 @@ const DistributionRequestPage: React.FC = () => {
           bgColor: 'bg-green-50',
           iconColor: 'text-green-600'
         };
+      case 'cancelled':
+        return { 
+          text: 'Đã hủy', 
+          color: 'bg-red-100 text-red-800 border-red-200', 
+          icon: X,
+          bgColor: 'bg-red-50',
+          iconColor: 'text-red-600'
+        };
+      default:
+        return { 
+          text: 'Không xác định', 
+          color: 'bg-gray-100 text-gray-800 border-gray-200', 
+          icon: AlertCircle,
+          bgColor: 'bg-gray-50',
+          iconColor: 'text-gray-600'
+        };
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-lg text-gray-600">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-lg text-red-600">Vui lòng đăng nhập để sử dụng tính năng này</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user.agency_id) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+          <p className="text-lg text-amber-600">Chỉ tài khoản đại lý mới có thể tạo yêu cầu phân phối</p>
+          <p className="text-sm text-gray-500 mt-2">User role: {user.account_role} | User ID: {user.id}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -276,9 +429,9 @@ const DistributionRequestPage: React.FC = () => {
                               className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             >
                               <option value="">Chọn sản phẩm...</option>
-                              {productsList.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} ({p.category})
+                              {products.map((product) => (
+                                <option key={product.item_id} value={String(product.item_id)}>
+                                  {product.item_name} - {product.unit_name} (Giá: {Number(product.price).toLocaleString('vi-VN')} VND)
                                 </option>
                               ))}
                             </select>

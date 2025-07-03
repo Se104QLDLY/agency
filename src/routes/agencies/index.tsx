@@ -38,7 +38,14 @@ const AgencyProfilePage: React.FC = () => {
             <div className="text-blue-700 font-bold text-lg flex items-center gap-2">
               <span>{user.full_name}</span>
             </div>
-            <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full mt-1 shadow">ID: {user.id}</span>
+            <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full mt-1 shadow">
+              User ID: {user.id}
+            </span>
+            {user.account_role === 'agent' && user.agency_id && (
+              <span className="inline-block bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full mt-1 shadow">
+                Agency ID: {user.agency_id}
+              </span>
+            )}
           </div>
           <div className="flex-1">
             <h1 className="text-4xl font-extrabold text-blue-800 drop-shadow uppercase tracking-wide mb-2 flex items-center gap-2">
