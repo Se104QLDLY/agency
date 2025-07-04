@@ -26,6 +26,17 @@ interface LoginResponse {
   user: User;
 }
 
+export interface RegisterPayload {
+  username: string;
+  password: string;
+  confirm_password: string;
+  full_name: string;
+  email: string;
+  phone_number: string;
+  address: string;
+  // account_role?: string; // Nếu muốn cho phép chọn role
+}
+
 /**
  * Hàm gọi API để đăng nhập
  * @param credentials - Username và password của người dùng
@@ -62,4 +73,10 @@ export const getMe = async (): Promise<User> => {
  */
 export const logout = async (): Promise<void> => {
   await axiosClient.post('/auth/logout/');
+};
+
+export const register = async (payload: RegisterPayload): Promise<User> => {
+  const { data } = await axiosClient.post('/auth/register/', payload);
+  // Trả về user đã đăng ký
+  return data.user;
 };
