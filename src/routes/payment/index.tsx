@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Receipt, Trash2, Eye, AlertCircle, CheckCircle, Users, Mail, Phone, MapPin, CalendarDays, DollarSign, Search, MoreVertical, Edit3, ListChecks, LayoutGrid, List, XCircle, Clock, Loader2, FilePlus2, Send, Building } from 'lucide-react';
-import { getPayments, createPayment } from '../../api/payment.api';
+import { Receipt, Trash2, AlertCircle, CheckCircle, Users, Mail, Phone, MapPin, CalendarDays, DollarSign, Search, MoreVertical, Edit3, ListChecks, LayoutGrid, List, XCircle, Clock, Loader2, FilePlus2, Send, Building, CreditCard } from 'lucide-react';
+import { getPayments, createPayment, updatePaymentStatus } from '../../api/payment.api';
 import { getAgencies, type PaginatedAgencies } from '../../api/agency.api';
 import { getAgencyForUser } from '../../api/staff.api';
 import { useAuth } from '../../hooks/useAuth';
@@ -232,6 +232,22 @@ const PaymentPage: React.FC = () => {
     fetchAllData(); // Re-fetch all data on success
   };
 
+  const handlePayment = async (paymentId: number) => {
+    try {
+      setLoading(true);
+      const updated = await updatePaymentStatus(paymentId, 'completed', 'Thanh toán hoàn tất bởi đại lý');
+      setRecords(prev => prev.map(r => r.payment_id === paymentId
+        ? { ...r, status: updated.status, status_reason: updated.status_reason }
+        : r
+      )); // Optimistically update status without reload
+    } catch (error) {
+      console.error('Lỗi khi thanh toán:', error);
+      alert('Có lỗi xảy ra khi thanh toán. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchAllData = async () => {
     if (!user) return;
     setLoading(true);
@@ -255,9 +271,10 @@ const PaymentPage: React.FC = () => {
             }
 
             if (agencyId) {
-                paymentsResponse = await getPayments(agencyId);
+                // Agency users only see pending payments that they can process
+                paymentsResponse = await getPayments(agencyId, 'pending');
                 const agency = agenciesList.find((a: Agency) => a.id === agencyId);
-                setTitle(agency ? `Phiếu Thu của ${agency.name}` : 'Phiếu Thu của Đại lý');
+                setTitle(agency ? `Phiếu Thu chờ thanh toán - ${agency.name}` : 'Phiếu Thu chờ thanh toán');
             } else {
                 paymentsResponse = { results: [] }; // No agency assigned, show no payments
                 setTitle('Không có dữ liệu phiếu thu');
@@ -296,15 +313,21 @@ const PaymentPage: React.FC = () => {
               <Receipt className="w-8 h-8 text-blue-600" />
               {title}
             </h1>
-            <p className="text-gray-500 mt-1">Theo dõi và quản lý các khoản thu tiền từ đại lý.</p>
+            <p className="text-gray-500 mt-1">
+              {user?.account_role === 'admin' 
+                ? 'Theo dõi và quản lý các khoản thu tiền từ đại lý.' 
+                : 'Xem và thanh toán các phiếu thu đang chờ xử lý.'}
+            </p>
           </div>
-          <button
-            onClick={handleOpenCreateModal}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md transition-colors"
-          >
-            <FilePlus2 className="w-5 h-5 mr-2" />
-            Lập Phiếu Thu
-          </button>
+          {user?.account_role === 'admin' && (
+            <button
+              onClick={handleOpenCreateModal}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md transition-colors"
+            >
+              <FilePlus2 className="w-5 h-5 mr-2" />
+              Lập Phiếu Thu
+            </button>
+          )}
         </div>
         </div>
         
@@ -343,6 +366,7 @@ const PaymentPage: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên Đại Lý</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày Thu</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Số Tiền Thu</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng Thái</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Người Tạo</th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Thao Tác</th>
                 </tr>
@@ -354,11 +378,29 @@ const PaymentPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{record.agency_name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{new Date(record.payment_date).toLocaleDateString('vi-VN')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-green-600">{parseFloat(record.amount_collected).toLocaleString('vi-VN')} VNĐ</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        record.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        record.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {record.status === 'completed' ? 'Hoàn thành' :
+                         record.status === 'pending' ? 'Chờ thanh toán' :
+                         'Thất bại'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{record.user_name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-800 transition-colors">
-                        <Eye size={20} />
-                      </button>
+                      {user?.account_role !== 'admin' && record.status === 'pending' && (
+                        <button
+                          onClick={() => handlePayment(record.payment_id)}
+                          disabled={loading}
+                          className="flex items-center px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 disabled:bg-green-300 transition-colors"
+                        >
+                          <CreditCard className="w-4 h-4 mr-1" />
+                          Thanh toán
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

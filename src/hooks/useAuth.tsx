@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  session: number;
 }
 
 // Tạo Context với giá trị mặc định
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState(0);
 
   // Kiểm tra session khi component được mount lần đầu
   useEffect(() => {
@@ -35,16 +37,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
-    const { user } = await apiLogin(credentials);
-    setUser(user);
+    // First, call login to set HttpOnly cookies
+    await apiLogin(credentials);
+    // Then fetch the full current user profile
+    const currentUser = await getMe();
+    setUser(currentUser);
+    setSession(prev => prev + 1);
   };
 
   const logout = async () => {
     await apiLogout();
     setUser(null);
+    setSession(prev => prev + 1);
   };
 
-  const value = { user, isLoading, login, logout };
+  const value = { user, isLoading, login, logout, session };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

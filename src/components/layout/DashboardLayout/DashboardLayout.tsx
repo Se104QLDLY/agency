@@ -1,13 +1,25 @@
 import React, { useState } from 'react';
 import { Sidebar } from '../Sidebar';
-import { useUserAccount } from '../../../hooks/useUserAccount';
+import { useAuth } from '../../../hooks/useAuth';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 const UserAccount: React.FC = () => {
-  const { user, isOpen, toggleMenu, handleLogout } = useUserAccount();
+  const { user, logout } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleMenu = () => setIsOpen(!isOpen);
+
+  const handleLogout = async () => {
+    setIsOpen(false);
+    await logout();
+  };
+
+  if (!user) {
+    return null; // Don't render anything if user is not loaded yet
+  }
   
   return (
     <div className="relative">
@@ -26,11 +38,11 @@ const UserAccount: React.FC = () => {
           <div className="px-4 py-3 border-b">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                {user.avatar}
+                {user.username.charAt(0).toUpperCase()}
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-700">{user.username}</p>
-                <p className="text-xs text-gray-500">{user.role === 'admin' ? 'Đại lý' : 'Khách hàng'}</p>
+                <p className="text-xs text-gray-500">{user.account_role}</p>
               </div>
             </div>
           </div>

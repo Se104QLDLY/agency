@@ -6,6 +6,8 @@ export interface Payment {
   user_id: number;
   user_name: string;
   amount_collected: string;
+  status: string;
+  status_reason: string | null;
   created_at: string | null;
 }
 

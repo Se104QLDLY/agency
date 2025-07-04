@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Loader2, AlertCircle, Edit3, ArrowLeft, FileText, Trash2, Download, Package, Building, Calendar, User, DollarSign } from 'lucide-react';
+import { Loader2, AlertCircle, Edit3, ArrowLeft, FileText, Trash2, Package, Building, Calendar, User, DollarSign } from 'lucide-react';
 import axiosClient from '../../api/axiosClient';
 
 interface ImportProduct {
@@ -129,13 +129,6 @@ const ViewImportPage: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <Link
-                to={`/import/edit/${receiptCode}`}
-                className="flex items-center gap-2 px-4 py-2 text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 rounded-xl transition-colors font-semibold"
-              >
-                <Edit3 className="h-5 w-5" />
-                Chỉnh sửa
-              </Link>
               <button
                 onClick={() => navigate('/import')}
                 className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors font-semibold"
@@ -300,21 +293,7 @@ const ViewImportPage: React.FC = () => {
               <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-lg">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Thao tác</h3>
                 <div className="space-y-3">
-                  <Link
-                    to={`/import/edit/${receiptCode}`}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
-                  >
-                    <Edit3 className="h-4 w-4" />
-                    Chỉnh sửa
-                  </Link>
-                  <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-                    <Download className="h-4 w-4" />
-                    In phiếu nhập
-                  </button>
-                  <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
-                    <Trash2 className="h-4 w-4" />
-                    Xóa phiếu nhập
-                  </button>
+                  {/* Print button removed per requirements */}
                 </div>
               </div>
             </div>

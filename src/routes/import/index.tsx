@@ -32,6 +32,8 @@ interface Receipt {
   total_amount: string;
   created_at: string | null;
   details?: ReceiptDetail[];
+  status: string;
+  status_reason?: string;
 }
 
 // Interface cho đơn hàng xuất kho, bổ sung thêm thông tin đại lý
@@ -44,12 +46,14 @@ interface ExportOrder {
   };
   products: ProductItem[];
   totalAmount: number;
+  status: string;
+  statusReason?: string;
 }
 
 const ImportPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user, isLoading: isAuthLoading, session } = useAuth();
 
   const [orders, setOrders] = useState<ExportOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,14 +69,14 @@ const ImportPage: React.FC = () => {
       setTimeout(() => setToast(null), 5000);
       navigate('/import', { replace: true, state: {} });
     }
-  }, [isAuthLoading, user, location.state]);
+  }, [isAuthLoading, user, location.state, session]);
 
   const fetchReceipts = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const params: { agency_id?: number } = {};
+      const params: any = {};
       if (user?.account_role === 'agent' && user.agency_id) {
           params.agency_id = user.agency_id;
       }
@@ -108,6 +112,8 @@ const ImportPage: React.FC = () => {
           unit: 'pcs'
         })) || [],
         totalAmount: parseFloat(receipt.total_amount),
+        status: receipt.status,
+        statusReason: receipt.status_reason,
       }));
 
       setOrders(convertedOrders);
@@ -134,12 +140,43 @@ const ImportPage: React.FC = () => {
         >
           Chi tiết
         </button>
+        {user?.account_role === 'agent' && order.status === 'processing' && (
+          <button
+            onClick={() => handleConfirm(order.id)}
+            className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Xác nhận
+          </button>
+        )}
       </div>
     );
   };
   
   const totalReceipts = orders.length;
   const totalValue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+
+  // Function to confirm receipt (agent)
+  const handleConfirm = async (orderId: string) => {
+    const receiptId = parseInt(orderId.replace(/^PX/, ''), 10);
+    try {
+      setLoading(true);
+      await axiosClient.patch(`/inventory/receipts/${receiptId}/status/`, {
+        status: 'completed',
+        status_reason: 'Xác nhận nhận hàng bởi đại lý'
+      });
+      setOrders(prev => prev.map(o =>
+        o.id === orderId
+        ? { ...o, status: 'completed', statusReason: 'Xác nhận nhận hàng bởi đại lý' }
+        : o
+      ));
+      setToast({ type: 'success', message: 'Xác nhận nhận hàng thành công' });
+    } catch (err: any) {
+      console.error('Error confirming receipt:', err);
+      setToast({ type: 'error', message: 'Xác nhận thất bại, vui lòng thử lại' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (isAuthLoading || loading) {
     return (
@@ -240,6 +277,7 @@ const ImportPage: React.FC = () => {
                   <th className="py-4 px-4 text-left font-semibold text-gray-600 text-sm tracking-wider uppercase"><span className="flex items-center gap-2"><Building className="h-5 w-5" />Đại lý</span></th>
                   <th className="py-4 px-4 text-left font-semibold text-gray-600 text-sm tracking-wider uppercase hidden md:table-cell"><span className="flex items-center gap-2"><Box className="h-5 w-5" />Sản phẩm</span></th>
                   <th className="py-4 px-4 text-right font-semibold text-gray-600 text-sm tracking-wider uppercase"><span className="flex items-center gap-2 justify-end"><DollarSign className="h-5 w-5" />Tổng tiền</span></th>
+                  <th className="py-4 px-4 text-center font-semibold text-gray-600 text-sm uppercase">Trạng thái</th>
                   <th className="py-4 px-4 text-center font-semibold text-gray-600 text-sm tracking-wider uppercase"><span className="flex items-center gap-2 justify-center"><MoreVertical className="h-5 w-5" />Hành động</span></th>
                 </tr>
               </thead>
@@ -271,6 +309,17 @@ const ImportPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-4 py-4 font-semibold text-gray-900 text-right whitespace-nowrap">{formatCurrency(order.totalAmount)}</td>
+                    <td className="px-4 py-4 text-center whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {order.status === 'completed' ? 'Hoàn thành' :
+                         order.status === 'processing' ? 'Đang xử lý' :
+                         'Đã hủy'}
+                      </span>
+                    </td>
                     <td className="px-4 py-4 text-center">
                       {getActionButton(order)}
                     </td>
