@@ -18,7 +18,6 @@ const Register: React.FC = () => {
       account_role: 'agent' // Default role for agency frontend
     }
   });
-  const navigate = useNavigate();
   const [apiErrors, setApiErrors] = React.useState<string[]>([]);
   const [apiError, setApiError] = React.useState<string | null>(null);
 
