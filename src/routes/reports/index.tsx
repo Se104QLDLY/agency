@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { BarChart, FileText, FileSpreadsheet, FilePlus2, Users, TrendingUp, TrendingDown, CheckCircle, AlertCircle, Clock, User, Eye, Loader2, PieChart, Calendar } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { getSalesReport, getDebtReport } from '../../api/report.api';
+import { getAgencyById } from '../../api/agency.api';
 
 // --- DI CHUYỂN INTERFACE VÀO ĐÂY ---
 interface SalesReportItem {
@@ -31,6 +32,7 @@ const AgencyReportsPage: React.FC = () => {
   const { user } = useAuth();
   const [salesData, setSalesData] = useState<SalesReportItem[]>([]);
   const [debtData, setDebtData] = useState<DebtReportData | null>(null);
+  const [agencyName, setAgencyName] = useState<string>('...');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +68,15 @@ const AgencyReportsPage: React.FC = () => {
         setSalesData(salesResponse);
         setDebtData(debtResponse);
         setError(null);
+
+        // Nếu debtData không có agency_name, fetch từ API agency
+        if (debtResponse?.agency_name) {
+          setAgencyName(debtResponse.agency_name);
+        } else {
+          // Fetch agency name by id
+          const agency = await getAgencyById(user.agency_id);
+          setAgencyName(agency.name);
+        }
       } catch (err) {
         console.error("Failed to fetch report data:", err);
         setError("Tải dữ liệu báo cáo thất bại. Vui lòng thử lại.");
@@ -108,7 +119,7 @@ const AgencyReportsPage: React.FC = () => {
           <FileText className="h-8 w-8 text-white" />
         </div>
         <h1 className="text-3xl font-extrabold text-gray-900 mb-1 drop-shadow uppercase tracking-wide">
-          BÁO CÁO ĐẠI LÝ: {debtData?.agency_name ?? '...'}
+          BÁO CÁO ĐẠI LÝ: {agencyName}
         </h1>
         <p className="text-gray-600 text-lg text-center max-w-2xl">Tổng hợp, thống kê và quản lý các báo cáo doanh thu, tồn kho, công nợ và hoạt động của đại lý.</p>
       </div>

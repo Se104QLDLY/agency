@@ -46,6 +46,17 @@ interface LoginResponse {
   user: User;
 }
 
+export interface RegisterPayload {
+  username: string;
+  password: string;
+  confirm_password: string;
+  full_name: string;
+  email: string;
+  phone_number: string;
+  address: string;
+  // account_role?: string; // Nếu muốn cho phép chọn role
+}
+
 /**
  * Hàm gọi API để đăng nhập
  * @param credentials - Username và password của người dùng

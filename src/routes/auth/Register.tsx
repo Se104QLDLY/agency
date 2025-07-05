@@ -18,6 +18,9 @@ const Register: React.FC = () => {
       account_role: 'agent' // Default role for agency frontend
     }
   });
+  const navigate = useNavigate();
+  const [apiErrors, setApiErrors] = React.useState<string[]>([]);
+  const [apiError, setApiError] = React.useState<string | null>(null);
 
   const onSubmit = async (data: RegisterCredentials) => {
     try {
@@ -134,6 +137,18 @@ const Register: React.FC = () => {
             </select>
             {errors.account_role && (
               <span className="text-red-500 text-sm mt-1">{errors.account_role.message}</span>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-cyan-700 font-semibold mb-1">Địa chỉ</label>
+            <input
+              {...register('address')}
+              className="w-full px-4 py-3 rounded-xl border-2 border-cyan-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 outline-none transition-all text-lg bg-cyan-50 placeholder:text-cyan-300"
+              placeholder="Nhập địa chỉ"
+            />
+            {errors.address && (
+              <span className="text-red-500 text-sm mt-1">{errors.address.message}</span>
             )}
           </div>
 

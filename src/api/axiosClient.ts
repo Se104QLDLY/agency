@@ -15,11 +15,11 @@ axiosClient.interceptors.response.use(
   (error: AxiosError) => {
     // Xử lý lỗi 401 (Unauthorized)
     if (error.response?.status === 401) {
-      // Khi API trả về 401, nghĩa là session đã hết hạn hoặc không hợp lệ.
-      // Dòng dưới đây sẽ reload lại trang, trình duyệt sẽ tự động
-      // chuyển hướng đến trang đăng nhập nếu route được bảo vệ.
-      console.error('Unauthorized! Reloading page...');
-      window.location.reload();
+      // Nếu không phải đang ở trang login thì mới redirect
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+      // Nếu đang ở trang login thì không reload nữa, chỉ reject lỗi
     }
     return Promise.reject(error);
   }
