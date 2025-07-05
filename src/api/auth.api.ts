@@ -7,8 +7,28 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Mật khẩu không được để trống'),
 });
 
+// Định nghĩa schema cho đăng ký
+export const registerSchema = z.object({
+  username: z.string().min(3, 'Tên đăng nhập phải có ít nhất 3 ký tự'),
+  password: z.string()
+    .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
+    .regex(/[A-Z]/, 'Mật khẩu phải có ít nhất 1 chữ hoa')
+    .regex(/[a-z]/, 'Mật khẩu phải có ít nhất 1 chữ thường')
+    .regex(/[0-9]/, 'Mật khẩu phải có ít nhất 1 số'),
+  confirm_password: z.string(),
+  full_name: z.string().min(1, 'Họ và tên không được để trống'),
+  email: z.string().email('Email không hợp lệ'),
+  phone_number: z.string().optional(),
+  address: z.string().optional(),
+  account_role: z.enum(['admin', 'staff', 'agent']).default('agent'),
+}).refine((data) => data.password === data.confirm_password, {
+  message: "Mật khẩu xác nhận không khớp",
+  path: ["confirm_password"],
+});
+
 // Suy ra kiểu TypeScript từ Zod schema
 export type LoginCredentials = z.infer<typeof loginSchema>;
+export type RegisterCredentials = z.infer<typeof registerSchema>;
 
 // Định nghĩa kiểu dữ liệu cho User
 export interface User {
@@ -62,4 +82,14 @@ export const getMe = async (): Promise<User> => {
  */
 export const logout = async (): Promise<void> => {
   await axiosClient.post('/auth/logout/');
+};
+
+/**
+ * Hàm gọi API để đăng ký
+ * @param credentials - Thông tin đăng ký
+ * @returns Promise chứa thông tin user
+ */
+export const register = async (credentials: RegisterCredentials): Promise<LoginResponse> => {
+  const { data } = await axiosClient.post<LoginResponse>('/auth/register/', credentials);
+  return data;
 };

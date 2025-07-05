@@ -116,7 +116,12 @@ const DistributionRequestPage: React.FC = () => {
         console.log('Requests response:', requestsResponse);
         
         setProducts(productsResponse.results);
-        setRequests(requestsResponse.results?.map(transformApiToFrontend) || []);
+        // Gọi thêm API chi tiết cho từng request trước khi setRequests
+        const rawRequests = requestsResponse.results || [];
+        const detailedApiRequests = await Promise.all(
+          rawRequests.map(req => distributionApi.getDistributionRequest(req.issue_id))
+        );
+        setRequests(detailedApiRequests.map(transformApiToFrontend));
       } catch (error: any) {
         console.error('Error loading distribution data:', error);
         console.error('Error details:', error.response?.data, error.response?.status);
@@ -155,7 +160,12 @@ const DistributionRequestPage: React.FC = () => {
           agency_id: user.agency_id,
           limit: 50 
         });
-        const newRequests = response.results?.map(transformApiToFrontend) || [];
+        // Gọi API chi tiết khi refresh dữ liệu
+        const rawRefRequests = response.results || [];
+        const detailedRefRequests = await Promise.all(
+          rawRefRequests.map(req => distributionApi.getDistributionRequest(req.issue_id))
+        );
+        const newRequests = detailedRefRequests.map(transformApiToFrontend);
         
         // Check for status changes
         const oldRequests = requests;
