@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { PackageCheck, PackageOpen, BadgeCheck, Loader2, AlertCircle, ListChecks, CalendarDays, ShoppingCart, CheckCircle, Users, Phone, DollarSign, MoreVertical, Building, Box, Plus } from 'lucide-react';
+import { PackageCheck, Loader2, AlertCircle, ListChecks, CalendarDays, ShoppingCart, CheckCircle, Phone, DollarSign, MoreVertical, Building, Box, Plus } from 'lucide-react';
 import axiosClient from '../../api/axiosClient';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -12,8 +12,8 @@ interface ProductItem {
 }
 
 // Interface cho chi tiết phiếu nhập từ API
-interface ReceiptDetail {
-  receipt_detail_id: number;
+interface IssueDetail {
+  issue_detail_id: number;
   item: number;
   item_name: string;
   quantity: number;
@@ -22,16 +22,16 @@ interface ReceiptDetail {
 }
 
 // Interface cho phiếu nhập từ API
-interface Receipt {
-  receipt_id: number;
-  receipt_date: string;
+interface Issue {
+  issue_id: number;
+  issue_date: string;
   agency_id: number;
   agency_name: string;
   user_id: number;
   user_name: string;
   total_amount: string;
   created_at: string | null;
-  details?: ReceiptDetail[];
+  details?: IssueDetail[];
   status: string;
   status_reason?: string;
 }
@@ -62,7 +62,7 @@ const ImportPage: React.FC = () => {
 
   useEffect(() => {
     if (!isAuthLoading) {
-        fetchReceipts();
+        fetchIssues();
     }
     if (location.state?.message) {
       setToast({ type: 'success', message: location.state.message });
@@ -71,7 +71,7 @@ const ImportPage: React.FC = () => {
     }
   }, [isAuthLoading, user, location.state, session]);
 
-  const fetchReceipts = async () => {
+  const fetchIssues = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -81,39 +81,39 @@ const ImportPage: React.FC = () => {
           params.agency_id = user.agency_id;
       }
       
-      const response = await axiosClient.get('/inventory/receipts/', { params });
-      const receipts: Receipt[] = response.data.results || [];
+      const response = await axiosClient.get('/inventory/issues/', { params });
+      const issues: Issue[] = response.data.results || [];
       
-      const receiptDetailsPromises = receipts.map(async (receipt) => {
+      const issueDetailsPromises = issues.map(async (issue) => {
         try {
-          const detailResponse = await axiosClient.get(`/inventory/receipts/${receipt.receipt_id}/`);
+          const detailResponse = await axiosClient.get(`/inventory/issues/${issue.issue_id}/`);
           return {
-            ...receipt,
+            ...issue,
             details: detailResponse.data.details || []
           };
         } catch (error) {
-          console.warn(`Failed to fetch details for receipt ${receipt.receipt_id}:`, error);
-          return receipt;
+          console.warn(`Failed to fetch details for issue ${issue.issue_id}:`, error);
+          return issue;
         }
       });
       
-      const receiptsWithDetails = await Promise.all(receiptDetailsPromises);
+      const issuesWithDetails = await Promise.all(issueDetailsPromises);
       
-      const convertedOrders: ExportOrder[] = receiptsWithDetails.map(receipt => ({
-        id: `PX${String(receipt.receipt_id).padStart(3, '0')}`,
-        exportDate: receipt.receipt_date,
+      const convertedOrders: ExportOrder[] = issuesWithDetails.map(issue => ({
+        id: `PX${String(issue.issue_id).padStart(3, '0')}`,
+        exportDate: issue.issue_date,
         agency: {
-          name: receipt.agency_name || `Đại lý ${receipt.agency_id}`,
+          name: issue.agency_name || `Đại lý ${issue.agency_id}`,
           contact: 'N/A'
         },
-        products: receipt.details?.map((detail: ReceiptDetail) => ({
+        products: issue.details?.map((detail: IssueDetail) => ({
           name: detail.item_name,
           quantity: detail.quantity,
           unit: 'pcs'
         })) || [],
-        totalAmount: parseFloat(receipt.total_amount),
-        status: receipt.status,
-        statusReason: receipt.status_reason,
+        totalAmount: parseFloat(issue.total_amount),
+        status: issue.status,
+        statusReason: issue.status_reason,
       }));
 
       setOrders(convertedOrders);
@@ -135,16 +135,19 @@ const ImportPage: React.FC = () => {
       <div className="flex items-center justify-center gap-2">
         <button
           onClick={() => navigate(`/import/view/${order.id}`)}
-          className="px-3 py-1 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-semibold text-sm"
+          className="flex items-center gap-1.5 px-3 py-2 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all duration-200 font-semibold text-sm shadow-sm hover:shadow-md"
           title="Xem chi tiết"
         >
+          <ListChecks size={16} />
           Chi tiết
         </button>
         {user?.account_role === 'agent' && order.status === 'processing' && (
           <button
             onClick={() => handleConfirm(order.id)}
-            className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
+            title="Xác nhận nhận hàng"
           >
+            <PackageCheck size={16} />
             Xác nhận
           </button>
         )}
@@ -157,21 +160,21 @@ const ImportPage: React.FC = () => {
 
   // Function to confirm receipt (agent)
   const handleConfirm = async (orderId: string) => {
-    const receiptId = parseInt(orderId.replace(/^PX/, ''), 10);
+    const issueId = parseInt(orderId.replace(/^PX/, ''), 10);
     try {
       setLoading(true);
-      await axiosClient.patch(`/inventory/receipts/${receiptId}/status/`, {
-        status: 'completed',
+      await axiosClient.patch(`/inventory/issues/${issueId}/status/`, {
+        status: 'confirmed',
         status_reason: 'Xác nhận nhận hàng bởi đại lý'
       });
       setOrders(prev => prev.map(o =>
         o.id === orderId
-        ? { ...o, status: 'completed', statusReason: 'Xác nhận nhận hàng bởi đại lý' }
+        ? { ...o, status: 'confirmed', statusReason: 'Xác nhận nhận hàng bởi đại lý' }
         : o
       ));
       setToast({ type: 'success', message: 'Xác nhận nhận hàng thành công' });
     } catch (err: any) {
-      console.error('Error confirming receipt:', err);
+      console.error('Error confirming issue:', err);
       setToast({ type: 'error', message: 'Xác nhận thất bại, vui lòng thử lại' });
     } finally {
       setLoading(false);
@@ -202,7 +205,7 @@ const ImportPage: React.FC = () => {
               <AlertCircle className="h-8 w-8 text-red-600" />
               <p className="text-red-600 text-center">{error}</p>
               <button
-                onClick={fetchReceipts}
+                onClick={fetchIssues}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Thử lại
@@ -311,13 +314,17 @@ const ImportPage: React.FC = () => {
                     <td className="px-4 py-4 font-semibold text-gray-900 text-right whitespace-nowrap">{formatCurrency(order.totalAmount)}</td>
                     <td className="px-4 py-4 text-center whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        order.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                         order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
+                        order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                        order.status === 'postponed' ? 'bg-orange-100 text-orange-800' :
+                        'bg-gray-100 text-gray-800'
                       }`}>
-                        {order.status === 'completed' ? 'Hoàn thành' :
+                        {order.status === 'confirmed' ? 'Đã xác nhận' :
                          order.status === 'processing' ? 'Đang xử lý' :
-                         'Đã hủy'}
+                         order.status === 'cancelled' ? 'Đã hủy' :
+                         order.status === 'postponed' ? 'Tạm hoãn' :
+                         'Không xác định'}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">

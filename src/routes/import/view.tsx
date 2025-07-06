@@ -4,7 +4,7 @@ import { Loader2, AlertCircle, Edit3, ArrowLeft, FileText, Trash2, Package, Buil
 import axiosClient from '../../api/axiosClient';
 
 interface ImportProduct {
-  receipt_detail_id: number;
+  issue_detail_id: number;
   item: number;
   item_name: string;
   quantity: number;
@@ -13,8 +13,8 @@ interface ImportProduct {
 }
 
 interface ImportRecord {
-  receipt_id: number;
-  receipt_date: string;
+  issue_id: number;
+  issue_date: string;
   agency_id: number;
   agency_name: string;
   user_id: number;
@@ -22,6 +22,8 @@ interface ImportRecord {
   total_amount: string;
   created_at: string | null;
   details: ImportProduct[];
+  status: string;
+  status_reason?: string;
 }
 
 const ViewImportPage: React.FC = () => {
@@ -37,15 +39,15 @@ const ViewImportPage: React.FC = () => {
     }
   }, [id]);
 
-  const fetchImportRecord = async (receiptId: string) => {
+  const fetchImportRecord = async (issueId: string) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Extract receipt ID từ URL parameter (có thể là PX001 hoặc 1)
-      const numericId = receiptId.startsWith('PX') ? receiptId.slice(2) : receiptId;
+      // Extract issue ID từ URL parameter (có thể là PX001 hoặc 1)
+      const numericId = issueId.startsWith('PX') ? issueId.slice(2) : issueId;
       
-      const response = await axiosClient.get(`/inventory/receipts/${numericId}/`);
+      const response = await axiosClient.get(`/inventory/issues/${numericId}/`);
       setImportRecord(response.data);
     } catch (err: any) {
       console.error('Error fetching receipt details:', err);
@@ -109,7 +111,37 @@ const ViewImportPage: React.FC = () => {
     return new Intl.NumberFormat('vi-VN').format(Number(amount)) + ' VND';
   };
 
-  const receiptCode = `PX${String(importRecord.receipt_id).padStart(3, '0')}`;
+  const receiptCode = `PX${String(importRecord.issue_id).padStart(3, '0')}`;
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'processing':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'postponed':
+        return 'bg-orange-100 text-orange-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'processing':
+        return 'Đang xử lý';
+      case 'confirmed':
+        return 'Đã xác nhận';
+      case 'postponed':
+        return 'Tạm hoãn';
+      case 'cancelled':
+        return 'Đã hủy';
+      default:
+        return 'Không xác định';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -156,7 +188,7 @@ const ViewImportPage: React.FC = () => {
                   <div>
                     <label className="block text-blue-700 font-semibold mb-1">Ngày nhập hàng</label>
                     <p className="bg-white px-4 py-2 rounded-lg border text-gray-800">
-                      {new Date(importRecord.receipt_date).toLocaleDateString('vi-VN')}
+                      {new Date(importRecord.issue_date).toLocaleDateString('vi-VN')}
                     </p>
                   </div>
                   <div>
@@ -207,7 +239,7 @@ const ViewImportPage: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-green-100">
                       {importRecord.details?.map((product) => (
-                        <tr key={product.receipt_detail_id}>
+                        <tr key={product.issue_detail_id}>
                           <td className="px-4 py-3 font-semibold text-gray-900">{product.item_name}</td>
                           <td className="px-4 py-3 text-right text-gray-700">{product.quantity.toLocaleString('vi-VN')}</td>
                           <td className="px-4 py-3 text-right text-gray-700">{formatCurrency(product.unit_price)}</td>
@@ -268,7 +300,7 @@ const ViewImportPage: React.FC = () => {
                   <div>
                     <label className="block text-gray-600 font-medium mb-1">Ngày nhập hàng</label>
                     <p className="text-blue-600 font-semibold">
-                      {new Date(importRecord.receipt_date).toLocaleDateString('vi-VN')}
+                      {new Date(importRecord.issue_date).toLocaleDateString('vi-VN')}
                     </p>
                   </div>
                   {importRecord.created_at && (
