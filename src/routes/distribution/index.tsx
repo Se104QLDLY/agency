@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { Package, MapPin, Clock, CheckCircle, AlertCircle, Truck, Plus, X, Send, RefreshCw, Eye, Calendar, User } from 'lucide-react';
+import { Package, MapPin, Clock, CheckCircle, AlertCircle, Truck, Plus, X, Send, RefreshCw, Calendar, User } from 'lucide-react';
 import distributionApi, { type DistributionRequest as ApiDistributionRequest, type Product, type CreateDistributionRequest } from '../../api/distribution.api';
 import { useAuth } from '../../hooks/useAuth';
 
 interface ProductLine {
   productId: string;
   quantity: number;
-  unit: string;
+  unit: string; // Will be auto-filled from selected product
 }
 
 interface DistributionFormData {
@@ -33,7 +33,7 @@ const transformApiToFrontend = (apiRequest: ApiDistributionRequest): Distributio
   products: apiRequest.details?.map(detail => ({
     productId: String(detail.item),
     quantity: detail.quantity,
-    unit: 'Cái' // Default unit, could be enhanced with item details
+    unit: 'Cái' // Use default unit since API doesn't provide unit_name in details
   })) || [],
   deliveryAddress: 'Địa chỉ từ hệ thống', // Backend doesn't store delivery address
   submittedAt: apiRequest.created_at || new Date().toISOString(),
@@ -56,14 +56,12 @@ const getDefaultStatusReason = (status: string): string => {
   }
 };
 
-const unitOptions = ['Thùng', 'Hộp', 'Chai', 'Gói', 'Kg', 'Lít', 'Cái'];
-
 const schema = yup.object({
   products: yup.array().of(
     yup.object({
       productId: yup.string().required('Vui lòng chọn sản phẩm'),
       quantity: yup.number().required('Vui lòng nhập số lượng').min(1, 'Số lượng phải lớn hơn 0'),
-      unit: yup.string().required('Vui lòng chọn đơn vị'),
+      unit: yup.string(), // Not required validation since it's auto-filled
     })
   ).min(1, 'Vui lòng chọn ít nhất 1 sản phẩm'),
   deliveryAddress: yup.string().required('Vui lòng nhập địa chỉ giao hàng').min(10, 'Địa chỉ phải có ít nhất 10 ký tự'),
@@ -85,6 +83,7 @@ const DistributionRequestPage: React.FC = () => {
     handleSubmit,
     reset,
     control,
+    setValue,
     formState: { errors },
   } = useForm<DistributionFormData>({
     resolver: yupResolver(schema) as any,
@@ -95,6 +94,21 @@ const DistributionRequestPage: React.FC = () => {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'products' });
+
+  // Watch for product selection changes to auto-fill unit
+  const watchedProducts = useWatch({ control, name: 'products' });
+
+  // Auto-fill unit when product is selected
+  useEffect(() => {
+    watchedProducts?.forEach((product, index) => {
+      if (product.productId) {
+        const selectedProduct = products.find(p => String(p.item_id) === product.productId);
+        if (selectedProduct && selectedProduct.unit_name) {
+          setValue(`products.${index}.unit`, selectedProduct.unit_name);
+        }
+      }
+    });
+  }, [watchedProducts, products, setValue]);
 
   // Load data from API
   useEffect(() => {
@@ -474,23 +488,14 @@ const DistributionRequestPage: React.FC = () => {
                           <div className="flex items-end gap-2">
                             <div className="flex-1">
                               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Đơn vị
+                                Đơn vị tính
                               </label>
-                              <select
+                              <input
                                 {...register(`products.${idx}.unit` as const)}
-                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                              >
-                                <option value="">Chọn đơn vị</option>
-                                {unitOptions.map((u) => (
-                                  <option key={u} value={u}>{u}</option>
-                                ))}
-                              </select>
-                              {errors.products?.[idx]?.unit && (
-                                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                                  <AlertCircle className="h-4 w-4" />
-                                  {errors.products[idx]?.unit?.message}
-                                </p>
-                              )}
+                                readOnly
+                                placeholder="Tự động điền từ sản phẩm"
+                                className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-700 cursor-not-allowed"
+                              />
                             </div>
                             {fields.length > 1 && (
                               <button
