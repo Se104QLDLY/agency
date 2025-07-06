@@ -1,7 +1,4 @@
 import { Routes, Route, Outlet } from 'react-router-dom';
-import { LoginPage } from '../pages/LoginPage';
-import Register from './auth/Register';
-import ForgotPassword from './auth/ForgotPassword';
 import ImportPage from './import';
 import AddImportPage from './import/add';
 import ViewImportPage from './import/view';
@@ -34,12 +31,7 @@ const MainLayout = () => (
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* Auth routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-
-      {/* Protected Routes with MainLayout */}
+      {/* All routes are protected - redirect to central login if not authenticated */}
       <Route element={<ProtectedRoute />}>
         <Route path="/*" element={<MainLayout />}>
           <Route index element={<ExportPage />} />

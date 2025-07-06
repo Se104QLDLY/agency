@@ -1,20 +1,56 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export const ProtectedRoute = () => {
   const { user, isLoading } = useAuth();
 
-  // Nếu đang trong quá trình kiểm tra user (lúc tải lại trang)
-  // thì hiển thị một màn hình chờ đơn giản
+  useEffect(() => {
+    // Only redirect if we're done loading AND there's no user
+    if (!isLoading && !user) {
+      console.log('Agency app: No user found, redirecting to central login');
+      window.location.href = 'http://localhost:5173/login';
+      return;
+    }
+
+    // If authenticated but wrong role, redirect to appropriate app
+    if (!isLoading && user && user.account_role !== 'agent') {
+      console.log('Agency app: Wrong role, redirecting to appropriate app');
+      switch (user.account_role) {
+        case 'admin':
+          window.location.href = 'http://localhost:5173/admin';
+          break;
+        case 'staff':
+          window.location.href = 'http://localhost:5176/';
+          break;
+        default:
+          window.location.href = 'http://localhost:5173/login';
+      }
+      return;
+    }
+  }, [user, isLoading]);
+
+  // Show loading while checking auth
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="ml-4 text-lg">Đang kiểm tra quyền truy cập...</div>
+      </div>
+    );
   }
 
-  // Nếu không có user và đã kiểm tra xong, điều hướng về trang đăng nhập
-  if (!user) {
-    return <Navigate to="/login" />;
+  // Show loading while redirecting
+  if (!user || user.account_role !== 'agent') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="ml-4 text-lg">Đang chuyển hướng...</div>
+      </div>
+    );
   }
 
-  // Nếu có user, cho phép truy cập vào các route con
+  console.log('Agency app: User authenticated and has correct role');
+  // If authenticated and correct role, render the protected route
   return <Outlet />;
 };
