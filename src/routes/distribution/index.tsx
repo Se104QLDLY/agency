@@ -453,11 +453,15 @@ const DistributionRequestPage: React.FC = () => {
                               className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             >
                               <option value="">Chọn sản phẩm...</option>
-                              {products.map((product) => (
-                                <option key={product.item_id} value={String(product.item_id)}>
-                                  {product.item_name} - {product.unit_name} (Giá: {Number(product.price).toLocaleString('vi-VN')} VND)
-                                </option>
-                              ))}
+                              {products.map((product) => {
+                                const basePrice = Number(product.price);
+                                const exportPrice = Math.round(basePrice * 1.02); // 102% của giá nhập
+                                return (
+                                  <option key={product.item_id} value={String(product.item_id)}>
+                                    {product.item_name} - {product.unit_name} (Giá xuất: {exportPrice.toLocaleString('vi-VN')} VND)
+                                  </option>
+                                );
+                              })}
                             </select>
                             {errors.products?.[idx]?.productId && (
                               <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
