@@ -15,11 +15,10 @@ axiosClient.interceptors.response.use(
   (error: AxiosError) => {
     // Xử lý lỗi 401 (Unauthorized)
     if (error.response?.status === 401) {
-      // Nếu không phải đang ở trang login thì mới redirect
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login';
-      }
-      // Nếu đang ở trang login thì không reload nữa, chỉ reject lỗi
+      // Redirect về trang login chính (homepage)
+      console.log('Agency app: 401 Unauthorized, redirecting to login');
+      window.location.href = 'http://localhost:5173';
+      return Promise.reject(error);
     }
     return Promise.reject(error);
   }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Loader2, AlertCircle, Edit3, ArrowLeft, FileText, Trash2, Package, Building, Calendar, User, DollarSign } from 'lucide-react';
 import axiosClient from '../../api/axiosClient';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ImportProduct {
   issue_detail_id: number;
@@ -29,26 +30,45 @@ interface ImportRecord {
 const ViewImportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [importRecord, setImportRecord] = useState<ImportRecord | null>(null);
 
   useEffect(() => {
-    if (id) {
+    if (!isAuthLoading && id) {
       fetchImportRecord(id);
     }
-  }, [id]);
+  }, [id, isAuthLoading, user]);
 
   const fetchImportRecord = async (issueId: string) => {
     try {
       setLoading(true);
       setError(null);
 
+      // Kiểm tra quyền truy cập: chỉ agent có agency_id mới được xem dữ liệu
+      if (user?.account_role === 'agent' && !user.agency_id) {
+        console.log('Agency Import View: Agent without agency_id, blocking access');
+        setError('Tài khoản của bạn chưa được liên kết với đại lý nào. Vui lòng liên hệ quản trị viên.');
+        return;
+      }
+
       // Extract issue ID từ URL parameter (có thể là PX001 hoặc 1)
       const numericId = issueId.startsWith('PX') ? issueId.slice(2) : issueId;
       
+      console.log(`Agency Import View: Loading issue ${numericId} for user ${user?.username} (agency_id: ${user?.agency_id})`);
+      
       const response = await axiosClient.get(`/inventory/issues/${numericId}/`);
-      setImportRecord(response.data);
+      const record = response.data;
+      
+      // Kiểm tra quyền truy cập: agent chỉ được xem phiếu của agency mình
+      if (user?.account_role === 'agent' && user.agency_id && record.agency_id !== user.agency_id) {
+        console.log(`Agency Import View: Access denied - user agency_id ${user.agency_id} != record agency_id ${record.agency_id}`);
+        setError('Bạn không có quyền xem phiếu nhập này.');
+        return;
+      }
+      
+      setImportRecord(record);
     } catch (err: any) {
       console.error('Error fetching receipt details:', err);
       setError(err.response?.data?.detail || 'Không thể tải chi tiết phiếu nhập');
@@ -58,7 +78,7 @@ const ViewImportPage: React.FC = () => {
   };
 
   // Loading state
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
@@ -66,6 +86,22 @@ const ViewImportPage: React.FC = () => {
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
               <p className="text-gray-600">Đang tải chi tiết phiếu nhập...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Auth check
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex flex-col items-center gap-4">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+              <p className="text-red-600">Vui lòng đăng nhập để xem thông tin.</p>
             </div>
           </div>
         </div>

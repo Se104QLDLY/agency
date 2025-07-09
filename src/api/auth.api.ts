@@ -73,7 +73,19 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
  */
 export const getMe = async (): Promise<User> => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await axiosClient.get<any>('/auth/me/');
+  const { data } = await axiosClient.get<any>('/auth/me/', {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    },
+    // Thêm timestamp để tránh cache
+    params: {
+      '_t': Date.now()
+    }
+  });
+  console.log('Agency app: Raw API response for getMe:', data);
+  
   // Chuẩn hóa dữ liệu trả về từ API
   const normalizedUser: User = {
     id: data.user_id, // Map user_id sang id
@@ -85,6 +97,8 @@ export const getMe = async (): Promise<User> => {
     account_role: data.account_role,
     agency_id: data.agency_id, // Sẽ là undefined nếu API không trả về
   };
+  
+  console.log('Agency app: Normalized user data:', normalizedUser);
   return normalizedUser;
 };
 

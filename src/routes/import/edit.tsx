@@ -4,6 +4,8 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
+import { useAuth } from '../../hooks/useAuth';
+import { AlertCircle } from 'lucide-react';
 
 interface ImportProduct {
   productName: string;
@@ -38,6 +40,7 @@ const schema = yup.object({
 const EditImportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, isLoading: isAuthLoading } = useAuth();
   
   const {
     register,
@@ -117,6 +120,45 @@ const EditImportPage: React.FC = () => {
   ];
 
   const units = ['Thùng', 'Hộp', 'Chai', 'Gói', 'Kg', 'Lít', 'Cái'];
+
+  // Auth check
+  if (isAuthLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-gray-600">Đang tải...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-4" />
+            <p className="text-red-600">Vui lòng đăng nhập để sử dụng tính năng này.</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (user.account_role === 'agent') {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="h-8 w-8 text-amber-600 mx-auto mb-4" />
+            <p className="text-amber-600">Chỉ nhân viên mới có thể chỉnh sửa phiếu nhập.</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

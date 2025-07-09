@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, AlertCircle, Plus, Trash2, Package, Building, Calendar, User } from 'lucide-react';
 import axiosClient from '../../api/axiosClient';
+import { useAuth } from '../../hooks/useAuth';
 
 // Interface cho agency từ API
 interface Agency {
@@ -37,6 +38,7 @@ interface ProductFormData {
 
 const AddImportPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,8 +55,18 @@ const AddImportPage: React.FC = () => {
 
   // Load data từ API
   useEffect(() => {
-    Promise.all([fetchAgencies(), fetchItems()]);
-  }, []);
+    if (!isAuthLoading) {
+      // Kiểm tra quyền truy cập: chỉ non-agent mới có thể tạo phiếu nhập
+      if (user?.account_role === 'agent') {
+        console.log('Agency Import Add: Agent user blocked from creating import');
+        setError('Chỉ nhân viên mới có thể tạo phiếu nhập.');
+        setLoading(false);
+        return;
+      }
+      
+      Promise.all([fetchAgencies(), fetchItems()]);
+    }
+  }, [isAuthLoading, user]);
 
   const fetchAgencies = async () => {
     try {

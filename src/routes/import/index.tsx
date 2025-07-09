@@ -76,13 +76,24 @@ const ImportPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
+      // Kiểm tra quyền truy cập: chỉ agent có agency_id mới được xem dữ liệu
+      if (user?.account_role === 'agent' && !user.agency_id) {
+        console.log('Agency Import: Agent without agency_id, blocking access');
+        setOrders([]);
+        setError('Tài khoản của bạn chưa được liên kết với đại lý nào. Vui lòng liên hệ quản trị viên.');
+        return;
+      }
+
       const params: any = {};
       if (user?.account_role === 'agent' && user.agency_id) {
           params.agency_id = user.agency_id;
+          console.log(`Agency Import: Loading data for agency_id: ${user.agency_id}`);
       }
       
       const response = await axiosClient.get('/inventory/issues/', { params });
       const issues: Issue[] = response.data.results || [];
+      
+      console.log(`Agency Import: Loaded ${issues.length} issues for user ${user?.username}`);
       
       const issueDetailsPromises = issues.map(async (issue) => {
         try {

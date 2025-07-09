@@ -9,7 +9,15 @@ export interface PaginatedAgencies {
 }
 
 export const getAgencyById = async (id: number): Promise<Agency> => {
-  const response = await axiosClient.get(`/agency/${id}/`);
+  const response = await axiosClient.get(`/agency/${id}/`, {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    },
+    params: {
+      _t: Date.now() // Cache busting timestamp
+    }
+  });
   return response.data;
 };
 

@@ -99,16 +99,32 @@ const AgencyProfilePage: React.FC = () => {
   const [agencyError, setAgencyError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    // Reset state khi user thay đổi
+    setAgency(null);
+    setAgencyError(null);
+    setAgencyLoading(false);
+    
     if (user?.agency_id) {
       setAgencyLoading(true);
+      console.log(`Agency app: Loading agency data for user ${user.username} (ID: ${user.id}) with agency_id: ${user.agency_id}`);
+      
+      // Force reload agency data với cache busting
       getAgencyById(user.agency_id)
-        .then(setAgency)
-        .catch(() => setAgencyError('Không thể tải thông tin đại lý.'))
+        .then((agencyData) => {
+          console.log('Agency app: Loaded agency data:', agencyData);
+          setAgency(agencyData);
+        })
+        .catch((error) => {
+          console.error('Agency app: Failed to load agency:', error);
+          setAgencyError('Không thể tải thông tin đại lý.');
+        })
         .finally(() => setAgencyLoading(false));
     } else {
+      console.log(`Agency app: No agency_id for user ${user?.username} (role: ${user?.account_role})`);
       setAgency(null);
+      setAgencyError(null);
     }
-  }, [user?.agency_id]);
+  }, [user?.agency_id, user?.username, user?.id]);
 
   if (isLoading || agencyLoading) {
     return <LoadingSpinner />;
@@ -116,6 +132,11 @@ const AgencyProfilePage: React.FC = () => {
 
   if (!user) {
     return <ErrorMessage title="Không Thể Tải Hồ Sơ" message="Vui lòng đăng nhập để xem thông tin." />;
+  }
+
+  // Kiểm tra nếu là agent nhưng chưa có agency_id
+  if (user.account_role === 'agent' && !user.agency_id) {
+    return <ErrorMessage title="Chưa Được Phân Công Đại Lý" message="Tài khoản của bạn chưa được liên kết với đại lý nào. Vui lòng liên hệ quản trị viên để được cấp quyền truy cập." />;
   }
 
   return (
