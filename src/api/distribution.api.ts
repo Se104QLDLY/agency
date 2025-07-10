@@ -18,6 +18,7 @@ export interface DistributionRequest {
   status: 'processing' | 'confirmed' | 'postponed' | 'cancelled';
   status_reason?: string;
   created_at?: string;
+  delivery_address?: string;
   details?: {
     issue_detail_id: number;
     item: number;
