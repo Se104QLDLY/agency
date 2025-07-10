@@ -6,31 +6,21 @@ export const ProtectedRoute = () => {
   const { user, isLoading } = useAuth();
 
   useEffect(() => {
-  // Only redirect if we're done loading AND there's no user
-  if (!isLoading && !user) {
-    // Nếu đang ở agency app (port 5174), redirect thẳng sang admin app (port 5178)
-    if (
-      window.location.hostname === 'localhost' &&
-      window.location.port === '5174' &&
-      window.location.pathname !== '/'
-    ) {
-      const adminAppUrl = import.meta.env.VITE_ADMIN_APP_URL || 'http://localhost:5178';
-      window.location.href = adminAppUrl;
+    // ✅ Khi không có user sau khi load, luôn redirect về login page
+    if (!isLoading && !user) {
+      const loginPageUrl = import.meta.env.VITE_LOGIN_APP_URL || 'http://localhost:5179/login';
+      window.location.href = loginPageUrl;
       return;
     }
-    // Fallback: redirect to login page for other cases
-    const loginPageUrl = import.meta.env.VITE_LOGIN_APP_URL || 'http://localhost:5178';
-    window.location.href = loginPageUrl;
-    return;
-  }
 
-    // If authenticated but wrong role, redirect to appropriate app
+    // ✅ Nếu có user nhưng sai role thì điều hướng về app phù hợp
     if (!isLoading && user && user.account_role !== 'agent') {
       console.log('Agency app: Wrong role, redirecting to appropriate app');
-      const adminAppUrl = import.meta.env.VITE_ADMIN_APP_URL || 'http://localhost:5178'; // Fixed admin port
+
+      const adminAppUrl = import.meta.env.VITE_ADMIN_APP_URL || 'http://localhost:5178';
       const staffAppUrl = import.meta.env.VITE_STAFF_APP_URL || 'http://localhost:5176';
-      const loginPageUrl = import.meta.env.VITE_LOGIN_APP_URL || 'http://localhost:5179'; // Fixed login port
-      
+      const loginPageUrl = import.meta.env.VITE_LOGIN_APP_URL || 'http://localhost:5179';
+
       switch (user.account_role) {
         case 'admin':
           window.location.href = adminAppUrl;
@@ -66,6 +56,5 @@ export const ProtectedRoute = () => {
   }
 
   console.log('Agency app: User authenticated and has correct role');
-  // If authenticated and correct role, render the protected route
   return <Outlet />;
 };

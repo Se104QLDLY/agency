@@ -89,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       window.location.href = import.meta.env.VITE_AGENCY_APP_URL;
     } else {
       // Mặc định về homepage admin-site
-      const adminSiteUrl = import.meta.env.VITE_ADMIN_SITE_URL || 'http://localhost:5178';
+      const adminSiteUrl = import.meta.env.VITE_ADMIN_SITE_URL ;
       window.location.href = adminSiteUrl;
     }
   };

@@ -240,9 +240,19 @@ const PaymentPage: React.FC = () => {
         ? { ...r, status: updated.status, status_reason: updated.status_reason }
         : r
       )); // Optimistically update status without reload
-    } catch (error) {
+    } catch (error: any) {
+      let message = 'Có lỗi xảy ra khi thanh toán. Vui lòng thử lại.';
+      if (error?.response?.data) {
+        const data = error.response.data;
+        if (data.error) {
+          message = data.error;
+          if (data.current_status) {
+            message += ` (Trạng thái hiện tại: ${data.current_status})`;
+          }
+        }
+      }
       console.error('Lỗi khi thanh toán:', error);
-      alert('Có lỗi xảy ra khi thanh toán. Vui lòng thử lại.');
+      alert(message);
     } finally {
       setLoading(false);
     }
