@@ -84,6 +84,7 @@ const DistributionRequestPage: React.FC = () => {
     reset,
     control,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<DistributionFormData>({
     resolver: yupResolver(schema) as any,
@@ -104,11 +105,14 @@ const DistributionRequestPage: React.FC = () => {
       if (product.productId) {
         const selectedProduct = products.find(p => String(p.item_id) === product.productId);
         if (selectedProduct && selectedProduct.unit_name) {
-          setValue(`products.${index}.unit`, selectedProduct.unit_name);
+          const currentUnit = getValues(`products.${index}.unit`);
+          if (currentUnit !== selectedProduct.unit_name) {
+            setValue(`products.${index}.unit`, selectedProduct.unit_name);
+          }
         }
       }
     });
-  }, [watchedProducts, products, setValue]);
+  }, [watchedProducts, products, setValue, getValues]);
 
   // Load data from API
   useEffect(() => {
@@ -181,27 +185,27 @@ const DistributionRequestPage: React.FC = () => {
         );
         const newRequests = detailedRefRequests.map(transformApiToFrontend);
         
-        // Check for status changes
-        const oldRequests = requests;
-        newRequests.forEach(newRequest => {
-          const oldRequest = oldRequests.find(r => r.id === newRequest.id);
-          if (oldRequest && oldRequest.status !== newRequest.status) {
-            setNotification({
-              type: newRequest.status === 'confirmed' ? 'success' : 'info',
-              message: `Đơn hàng ${newRequest.id} đã được cập nhật: ${getStatusText(newRequest.status)}`
-            });
-            setTimeout(() => setNotification(null), 5000);
-          }
+        // Check for status changes using current requests as reference
+        setRequests(currentRequests => {
+          newRequests.forEach(newRequest => {
+            const oldRequest = currentRequests.find(r => r.id === newRequest.id);
+            if (oldRequest && oldRequest.status !== newRequest.status) {
+              setNotification({
+                type: newRequest.status === 'confirmed' ? 'success' : 'info',
+                message: `Đơn hàng ${newRequest.id} đã được cập nhật: ${getStatusText(newRequest.status)}`
+              });
+              setTimeout(() => setNotification(null), 5000);
+            }
+          });
+          return newRequests;
         });
-        
-        setRequests(newRequests);
       } catch (error) {
         console.error('Error refreshing requests:', error);
       }
     }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
-  }, [user, requests]);
+  }, [user?.agency_id]);
 
   const addProductLine = () => append({ productId: '', quantity: 1, unit: '' });
   const removeProductLine = (idx: number) => {
@@ -239,7 +243,8 @@ const DistributionRequestPage: React.FC = () => {
         items: data.products.map(product => {
           const productInfo = products.find(p => String(p.item_id) === product.productId);
           const basePrice = Number(productInfo?.price || 0);
-          const exportPrice = Math.round(basePrice * 1.02); // 102% của giá nhập
+          // Calculate exact 102% with proper decimal precision
+          const exportPrice = Math.round(basePrice * 102) / 100; // More precise calculation
           
           return {
             item: product.productId,

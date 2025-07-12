@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart, FileText, FileSpreadsheet, FilePlus2, Users, TrendingUp, TrendingDown, CheckCircle, AlertCircle, Clock, User, Eye, Loader2, PieChart, Calendar } from 'lucide-react';
+import { BarChart, FileText, FileSpreadsheet, FilePlus2, Users, TrendingUp, TrendingDown, CheckCircle, AlertCircle, Clock, User, Eye, Loader2, PieChart, Calendar, Download } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { getSalesReport, getDebtReport } from '../../api/report.api';
+import { getSalesReport, getDebtReport, generateReport, exportReportExcel, exportReportPDF } from '../../api/report.api';
 import { getAgencyById } from '../../api/agency.api';
+import { toast } from 'react-hot-toast';
 
 // --- DI CHUYỂN INTERFACE VÀO ĐÂY ---
 interface SalesReportItem {
@@ -35,6 +36,7 @@ const AgencyReportsPage: React.FC = () => {
   const [agencyName, setAgencyName] = useState<string>('...');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -87,6 +89,53 @@ const AgencyReportsPage: React.FC = () => {
 
     fetchData();
   }, [user]);
+
+  const handleExportReport = async (reportType: 'sales' | 'debt', format: 'excel' | 'pdf') => {
+    if (!user || !user.agency_id) {
+      toast.error('Không thể xác định đại lý');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Tạo báo cáo trước
+      const today = new Date();
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(today.getMonth() - 1);
+
+      const reportData = await generateReport({
+        report_type: reportType,
+        start_date: oneMonthAgo.toISOString().split('T')[0],
+        end_date: today.toISOString().split('T')[0],
+        agency_id: user.agency_id
+      });
+
+      // Xuất báo cáo
+      let blob;
+      if (format === 'excel') {
+        blob = await exportReportExcel(reportData.report_id);
+      } else {
+        blob = await exportReportPDF(reportData.report_id);
+      }
+
+      // Tạo link download
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bao_cao_${reportType}_${agencyName.replace(/\s+/g, '_')}_${today.getMonth() + 1}_${today.getFullYear()}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success(`Xuất báo cáo ${reportType === 'sales' ? 'doanh số' : 'công nợ'} thành công!`);
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Có lỗi xảy ra khi xuất báo cáo');
+    } finally {
+      setIsExporting(false);
+    }
+  };
   
   const totalRevenue = salesData.reduce((sum, item) => sum + item.total_revenue, 0);
   const totalDebt = debtData?.total_debt ?? 0;
@@ -122,7 +171,62 @@ const AgencyReportsPage: React.FC = () => {
           BÁO CÁO ĐẠI LÝ: {agencyName}
         </h1>
         <p className="text-gray-600 text-lg text-center max-w-2xl">Tổng hợp, thống kê và quản lý các báo cáo doanh thu, tồn kho, công nợ và hoạt động của đại lý.</p>
+        
+        {/* Export buttons */}
+        <div className="flex gap-4 mt-4">
+          <Link 
+            to="/reports/add" 
+            className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
+          >
+            <FilePlus2 className="h-6 w-6 mr-2" />
+            Lập báo cáo
+          </Link>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleExportReport('sales', 'excel')}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Xuất Doanh số Excel
+            </button>
+            <button
+              onClick={() => handleExportReport('sales', 'pdf')}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              Xuất Doanh số PDF
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleExportReport('debt', 'excel')}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Xuất Công nợ Excel
+            </button>
+            <button
+              onClick={() => handleExportReport('debt', 'pdf')}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              Xuất Công nợ PDF
+            </button>
+          </div>
+        </div>
+
+        {isExporting && (
+          <div className="flex items-center gap-2 mt-2 text-blue-600">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Đang xuất báo cáo...</span>
+          </div>
+        )}
       </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-lg p-6 border-2 border-green-100 flex flex-col items-center">
           <TrendingUp className="h-8 w-8 text-green-600 mb-2"/>
