@@ -35,7 +35,7 @@ const transformApiToFrontend = (apiRequest: ApiDistributionRequest): Distributio
     quantity: detail.quantity,
     unit: 'Cái' // Use default unit since API doesn't provide unit_name in details
   })) || [],
-  deliveryAddress: apiRequest.delivery_address || 'Địa chỉ từ hệ thống', // Sửa lại để lấy đúng địa chỉ
+  deliveryAddress: 'Địa chỉ từ hệ thống', // Backend doesn't store delivery address
   submittedAt: apiRequest.created_at || new Date().toISOString(),
   lastUpdatedAt: apiRequest.created_at || new Date().toISOString(),
   status: apiRequest.status,
@@ -606,21 +606,26 @@ const DistributionRequestPage: React.FC = () => {
                   <p className="text-sm">Tạo yêu cầu đầu tiên của bạn</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="p-4 space-y-3">
                   {requests.map((request) => {
                     const statusConfig = getStatusConfig(request.status);
+                    const StatusIcon = statusConfig.icon;
                     return (
                       <div
                         key={request.id}
-                        className="bg-gray-50 rounded-2xl p-4 border border-gray-200"
+                        onClick={() => handleViewDetails(request)}
+                        className="bg-gray-50 rounded-2xl p-4 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200 hover:border-blue-300"
                       >
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-bold text-gray-900">#{request.id}</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
-                            {statusConfig.text}
-                          </span>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-900">#{request.id}</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
+                              {statusConfig.text}
+                            </span>
+                          </div>
+                          <StatusIcon className={`h-4 w-4 ${statusConfig.iconColor}`} />
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-sm text-gray-600 mb-2">
+                        <div className="space-y-2 text-sm text-gray-600">
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4" />
                             <span>{request.products.length} sản phẩm</span>
@@ -629,25 +634,13 @@ const DistributionRequestPage: React.FC = () => {
                             <Calendar className="h-4 w-4" />
                             <span>{new Date(request.submittedAt).toLocaleDateString('vi-VN')}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            <span>{request.deliveryAddress}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <span>Người gửi: {user?.full_name || 'Ẩn danh'}</span>
-                          </div>
                         </div>
-                        <div className="mt-2 text-sm text-gray-700 font-semibold">Danh sách sản phẩm:</div>
-                        <ul className="ml-6 list-disc text-sm text-gray-700">
-                          {request.products.map((product, idx) => (
-                            <li key={idx}>
-                              {getProductName(product.productId)}: {product.quantity} {product.unit}
-                            </li>
-                          ))}
-                        </ul>
-                        {request.statusReason && (
-                          <div className="mt-2 text-xs text-amber-700">{request.statusReason}</div>
+                        {request.status === 'postponed' && (
+                          <div className="mt-3 p-2 bg-amber-50 rounded-lg border border-amber-200">
+                            <p className="text-xs text-amber-800 font-medium">
+                              ⚠️ {request.statusReason}
+                            </p>
+                          </div>
                         )}
                       </div>
                     );
