@@ -152,7 +152,7 @@ const ImportPage: React.FC = () => {
           <ListChecks size={16} />
           Chi tiết
         </button>
-        {user?.account_role === 'agent' && order.status === 'processing' && (
+        {user?.account_role === 'agent' && order.status === 'confirmed' && (
           <button
             onClick={() => handleConfirm(order.id)}
             className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
@@ -175,12 +175,12 @@ const ImportPage: React.FC = () => {
     try {
       setLoading(true);
       await axiosClient.patch(`/inventory/issues/${issueId}/status/`, {
-        status: 'confirmed',
+        status: 'delivered',
         status_reason: 'Xác nhận nhận hàng bởi đại lý'
       });
       setOrders(prev => prev.map(o =>
         o.id === orderId
-        ? { ...o, status: 'confirmed', statusReason: 'Xác nhận nhận hàng bởi đại lý' }
+        ? { ...o, status: 'delivered', statusReason: 'Xác nhận nhận hàng bởi đại lý' }
         : o
       ));
       setToast({ type: 'success', message: 'Xác nhận nhận hàng thành công' });
@@ -325,14 +325,16 @@ const ImportPage: React.FC = () => {
                     <td className="px-4 py-4 font-semibold text-gray-900 text-right whitespace-nowrap">{formatCurrency(order.totalAmount)}</td>
                     <td className="px-4 py-4 text-center whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        order.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                         order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                        order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'delivered' ? 'bg-green-100 text-green-800' :
                         order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                         order.status === 'postponed' ? 'bg-orange-100 text-orange-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
-                        {order.status === 'confirmed' ? 'Đã xác nhận' :
-                         order.status === 'processing' ? 'Đang xử lý' :
+                        {order.status === 'processing' ? 'Đang xử lý' :
+                         order.status === 'confirmed' ? 'Đã xác nhận' :
+                         order.status === 'delivered' ? 'Đã giao hàng' :
                          order.status === 'cancelled' ? 'Đã hủy' :
                          order.status === 'postponed' ? 'Tạm hoãn' :
                          'Không xác định'}

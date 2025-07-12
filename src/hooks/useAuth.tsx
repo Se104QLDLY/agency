@@ -85,11 +85,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Nếu là admin, chuyển về dashboard admin
       window.location.href = 'http://localhost:5178/admin';
     } else if (currentUser.account_role === 'agent') {
-      // Nếu là agent, chuyển về trang agency app
-      window.location.href = import.meta.env.VITE_AGENCY_APP_URL;
+      // Nếu là agent, ở lại agency app hiện tại
+      console.log('Agency app: Agent logged in, staying in current app');
+      // Không redirect - đã ở đúng app rồi
     } else {
       // Mặc định về homepage admin-site
-      const adminSiteUrl = import.meta.env.VITE_ADMIN_SITE_URL ;
+      const adminSiteUrl = import.meta.env.VITE_ADMIN_SITE_URL || 'http://localhost:5178';
       window.location.href = adminSiteUrl;
     }
   };
